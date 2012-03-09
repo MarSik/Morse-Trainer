@@ -1,0 +1,62 @@
+MorseTrainer
+============
+
+Author: Martin Sivak <mars@montik.net>
+Based on: my own design
+Started in: Mar 2012
+
+Schematics is in directory sch/
+Firmware in directory firmware/
+
+
+Goals
+=====
+
+- pocket sized device which can randomly select a morse symbol from the subset I am just learning and output morse code followed by it's spoken representation
+- morse would be sent do headphones using selectable pitch and also blinked on LED
+- after the correct answer, a button will be used to mark if I answered correctly as well (score tracking :)
+- menus will be spoken using samples stored on flash chip (8kHz sample rate, 8bit)
+- morse speed should be selectable (5 - 40wpm?)
+- morse key stereo jack input to allow for future sending practice, the input might be also switchable to some digital form (PC communication)
+- volume will be controllable by software (rotary encoder, morse key?)
+
+Devices
+=======
+
+ATtiny861A CPU (8kB flash, 512B RAM, 512B EEPROM)
+LM386N headphone amplifier
+A25L40PU 4Mbit SPI flash (about 64s worth of audio when using 8kHz sample rate)
+MCP4251-104 100k dual channel SPI digital potentiometer
+
+Architecture
+============
+
+
+A25L40PU Flash
+==============
+
+   0 B \_ indexing table, 256 entries in the form (3B starting address, 2B length)
+1279 B /  standard characters will be at their ascii position, the rest will have special numbers
+
+1280 B \_ sample data, raw audio samples in mono 8bit, 8kHz samplerate (65.37s) 
+ end   /
+
+ATtiny861 EEPROM
+================
+
+Morse table:
+- array of morse characters ordered in learning sequence
+- each character entry has three bytes
+  [5 reserved bits, L2, L1, L0]
+  [8 bit ID]
+  [D7, D6, D5, D4, D3, D2, D1, D0]
+
+  L<2:0> represents the number of dit/dahs in the character in the range <1,8> (no of didahs = L+1)
+  ID<7:0> is index to the table with audio recordings (and also ascii representation where applicable)
+  D<7:0> are dit/dahs - 0 = dit and 1 = dah, only L least significant bits are used, D0 is played first
+
+  the table will be constructed using macro MORSE(<L>, <ID>, DIT, DAH, ...)
+
+Changelog
+=========
+
