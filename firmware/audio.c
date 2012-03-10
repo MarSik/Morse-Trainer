@@ -8,7 +8,6 @@
 typedef void (*int_routine)(void);
 
 volatile int_routine next_sample; /* pointer to proper next sample method */
-volatile int_routine morse_space; /* pointer to method which sets output to space in morse mode */
 
 volatile uint8_t sine_id;
 
@@ -32,9 +31,10 @@ ISR(TIMER0_COMPA_vect)
 }
 
 /* interrupt which sets output to morse space */
+void inline output_space(void);
 ISR(TIMER1_COMPA_vect)
 {
-    if (morse_space) morse_space();
+    output_space();
 }
 
 /* interrupt which loads new sample */
@@ -113,7 +113,7 @@ void sample_morse(void)
     sine_id = 0;
 }
 
-void output_space(void)
+void inline output_space(void)
 {
     /* stop sound, output morse space */
     dac_mute();
@@ -127,7 +127,6 @@ void output_space(void)
 void audio_wav_init(uint16_t samplerate)
 {
     audio_buffer_clear();
-    morse_space = NULL;
     next_sample = &sample_wav;
 
     /*
@@ -188,7 +187,6 @@ void audio_wav_init(uint16_t samplerate)
 void audio_morse_init(uint16_t pitch, uint8_t wpm)
 {
     audio_buffer_clear();
-    morse_space = &output_space;
     next_sample = &sample_morse;
     sine_id = 0;
 

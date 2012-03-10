@@ -37,6 +37,8 @@ uint8_t inline sine(uint8_t id) {
     else if (q == 1) return 128 + sine_table[sine_table_len - id];
     else if (q == 2) return 128 - sine_table[id];
     else if (q == 3) return 128 - sine_table[sine_table_len - id];
+
+    return 0;
 }
 
 #endif /* __MT_sine_MS_20120309_ */
