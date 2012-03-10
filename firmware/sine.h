@@ -22,6 +22,7 @@ uint8_t sine_table[] EEMEM = {
 };
 
 #define sine_table_len 16
+#define sine_len (sine_table_len << 2)
 
 /* get sine value transposed on 0 - 255 (center at 128),
    angle values are represented by a number between 0 - 63 (step 5.625 deg) */

@@ -2,9 +2,9 @@
 #define __MT_flash_H_MS_20120309_
 
 /* ports */
-#define FLASH_DDR DDRA
-#define FLASH_PORT PORTA
-#define FLASH_CS 0
+#define FLASH_DDR DDRB
+#define FLASH_PORT PORTB
+#define FLASH_CS 3
 
 /* initialization to proper state at boot */
 void flash_init();

@@ -2,9 +2,9 @@
 #define __MT_dac_MS_20120309_
 
 /* ports */
-#define DAC_DDR DDRB
-#define DAC_PORT PORTB
-#define DAC_CS 3
+#define DAC_DDR DDRA
+#define DAC_PORT PORTA
+#define DAC_CS 0
 
 /* initializes dac during bootup */
 void dac_init();
@@ -18,5 +18,9 @@ void dac_volume(uint8_t vol);
 
 /* set dac output to value*Vcc/256 */
 void dac_output(uint8_t value);
+
+/* mute/unmute but remember volume */
+void dac_mute();
+void dac_unmute();
 
 #endif /* __MT_dac_MS_20120309_ */
