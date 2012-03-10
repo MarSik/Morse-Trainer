@@ -29,16 +29,22 @@ uint8_t sine_table[] EEMEM = {
 /* get sine value transposed on 0 - 255 (center at 128),
    angle values are represented by a number between 0 - 63 (step 5.625 deg) */
 
+uint8_t inline sine_table_get(uint8_t id)
+{
+    return eeprom_read_byte(sine_table + id);
+}
+
 uint8_t inline sine(uint8_t id) {
     uint8_t q = id / sine_table_len; /* divide by number of table entries */
     id = id & (sine_table_len - 1); /* remove quadrant id from table id */
 
-    if(q == 0) return 128 + sine_table[id];
-    else if (q == 1) return 128 + sine_table[sine_table_len - id];
-    else if (q == 2) return 128 - sine_table[id];
-    else if (q == 3) return 128 - sine_table[sine_table_len - id];
+    if(q == 0) return 128 + sine_table_get(id);
+    else if (q == 1) return 128 + sine_table_get(sine_table_len - id);
+    else if (q == 2) return 128 - sine_table_get(id);
+    else if (q == 3) return 128 - sine_table_get(sine_table_len - id);
 
     return 0;
 }
+
 
 #endif /* __MT_sine_MS_20120309_ */
