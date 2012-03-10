@@ -17,6 +17,8 @@ uint16_t dit_length;      /* number of sample clock cycles for one dit */
 /* interrupt which outputs next wavetable value and resets the timer */
 ISR(TIMER0_COMPA_vect)
 {
+    TCNT0 = 0;
+
     uint8_t v = sine(sine_id);
 
     dac_begin();
@@ -24,8 +26,6 @@ ISR(TIMER0_COMPA_vect)
     dac_end();
 
     sine_id = sine_id % sine_len;
-
-    TCNT0 = 0;
 }
 
 /* interrupt which sets output to morse space */
@@ -89,16 +89,24 @@ void sample_morse()
     else l.space = 1; // one space after didah
 
     /* setup sampling timer to output symbol and space */
-    OCR0A = (l.space + l.symbol) * dit_length; /* length of symbol + space */
-    OCR0B = l.symbol * dit_length; /* length of symbol */
-    
+    uint16_t len;
+    len = (l.space + l.symbol) * dit_length; /* length of symbol + space */
+    TC1H = len >> 8;
+    OCR1C = len & 0xff;
+
+    len = l.symbol * dit_length; /* length of symbol */
+    TC1H = len >> 8;
+    OCR1A = len & 0xff;
+
     /* reset timer and start outputing sound */
     dac_unmute();
     dac_begin();
     dac_output(sine(0));
     dac_end();
 
+    /* reset wavetable */
     TCNT0 = 0;
+    sine_id = 0;
 }
 
 void output_space()
@@ -164,7 +172,15 @@ void audio_wav_init(uint16_t samplerate)
     TIMSK &= ~_BV(OCIE0A);
 }
 
-/* Initialize sampling/wavetable timer for morse output */
+/* Initialize sampling/wavetable timer for morse output
+
+  Morse speed definitions
+
+  PARIS = 50 dot time segments
+  12wpm = 600 dots per minute = 10 dots per second
+  20wpm = 1000 dots per minute = 16.66 dots per second
+*/
+
 void audio_morse_init(uint16_t pitch, uint8_t speed)
 {
     audio_buffer_clear();
@@ -194,16 +210,16 @@ void audio_morse_init(uint16_t pitch, uint8_t speed)
        max speed will be 60 wpm = 1 dit per  20ms = 160000 cycles
        min speed will be  5 wpm = 1 dit per 240ms = 1920000 cycles
 
-       with prescaler 256 it is:
-          60 wpm = 625  cycles per 1 dit
-          30 wpm = 1250  -"-
-          20 wpm = 1875  -"-
-          10 wpm = 3750  -"-
-           3 wpm = 12500 -"-
-           1 wpm = 37500 -"-
+       with prescaler 1024 it is:
+          60 wpm = 156.4  cycles per 1 dit
+          30 wpm = 312.5  -"-
+          20 wpm = 438.75 -"-
+          10 wpm = 937.5  -"-
+           3 wpm = 3125   -"-
+           1 wpm = 9375   -"-
     */
-    sample_clock = 0b1001; /* clock select (prescaler 256) */
-    dit_length = 37500 / wpm; /* number of timer cycles for one dit at given speed */ 
+    sample_clock = 0b1011; /* clock select (prescaler 1024) */
+    dit_length = 9375 / wpm; /* number of timer cycles for one dit at given speed */ 
 
     TC1H = 0;
     OCR1A = 0; /* symbol length */
@@ -222,11 +238,12 @@ void audio_morse_init(uint16_t pitch, uint8_t speed)
        timer0 16bit mode
        compare A resets the timer to 0
     */
-    TCCR0A = _BV(TCW0) | _BV(CTC0);
-    TCCR0B = 0;    
+    TCCR0A = _BV(TCW0);
+    TCCR0B = 0;
 
-    OCR0A = 0; /* TOP value for the wavetable timer */
-    OCR0B = 0;
+    wavetable_clock = 0b001; /* prescaler 1 */
+    OCR0B = (F_CPU / (pitch * sine_len)) >> 8;
+    OCR0A = (F_CPU / (pitch * sine_len)) && 0xff; /* TOP value for the wavetable timer */
 
     TCNT0 = 0; /* actual counter value */
 

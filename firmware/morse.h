@@ -85,12 +85,4 @@ MORSE_TABLE(morse_table) EEMEM = {
     MORSE('E', di, di, di, di, di, di, di, dit) //error
 };
 
-/*
-  Morse speed definitions
-
-  PARIS = 50 dot time segments
-  12wpm = 600 dots per minute = 10 dots per second
-  20wpm = 1000 dots per minute = 16.66 dots per second
-*/
-
 #endif /* __MT_morse_20120309__ */

@@ -13,7 +13,6 @@ void setup(void)
     DDRB |= _BV(MOSI) | _BV(SCK);
     PORTB = 0;
 
-    audio_init();
     dac_init();
     flash_init();
 }
