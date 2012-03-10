@@ -2,11 +2,11 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/sleep.h>
-#include <stdlib.h>
 
 #include "dac.h"
 #include "flash.h"
 #include "audio.h"
+#include "morse.h"
 
 void setup(void)
 {
@@ -25,14 +25,14 @@ int main(void)
     audio_morse_init(600, 10);
 
     while(!audio_buffer_full())
-        audio_morse_data(4, 0b00001000, 7);
+        audio_morse_data(morse_table[25*3], morse_table[25*3+2], 7);
 
     dac_volume(255);
     audio_play();
 
     while(1) {
         while(audio_buffer_full());
-        audio_morse_data(4, 0b00001000, 7);
+        audio_morse_data(morse_table[25*3], morse_table[25*3+2], 7);
     }
 
     return 0;

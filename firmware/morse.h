@@ -28,7 +28,7 @@
 #define MORSE_X(ID, A,B,C,D,E,F,G,H, FUNC, ...) FUNC  
 
 // The macro that the programmer uses 
-#define MORSE(...) MORSE_X(,##__VA_ARGS__,                      \
+#define MORSE(...) MORSE_X(__VA_ARGS__,                         \
                            MORSE8(__VA_ARGS__),                 \
                            MORSE7(__VA_ARGS__),                 \
                            MORSE6(__VA_ARGS__),                 \
@@ -36,7 +36,7 @@
                            MORSE4(__VA_ARGS__),                 \
                            MORSE3(__VA_ARGS__),                 \
                            MORSE2(__VA_ARGS__),                 \
-                           MORSE1(__VA_ARGS__)                  \
+                           MORSE1(__VA_ARGS__),                 \
                            )
 
 // table of morse characters sorted in order of learning
