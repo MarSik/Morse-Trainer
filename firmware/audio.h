@@ -43,7 +43,7 @@
 void audio_wav_init(uint16_t samplerate);
 
 /* Initialize sampling/wavetable timer for morse output */
-void audio_morse_init(uint16_t pitch, uint8_t speed);
+void audio_morse_init(uint16_t pitch, uint8_t wpm);
 
 /* Prepare first sample/morse character to play, unmute and start needed timers */
 void audio_start();

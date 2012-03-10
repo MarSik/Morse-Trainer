@@ -181,7 +181,7 @@ void audio_wav_init(uint16_t samplerate)
   20wpm = 1000 dots per minute = 16.66 dots per second
 */
 
-void audio_morse_init(uint16_t pitch, uint8_t speed)
+void audio_morse_init(uint16_t pitch, uint8_t wpm)
 {
     audio_buffer_clear();
     morse_space = output_space;
