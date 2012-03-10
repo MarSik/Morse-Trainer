@@ -46,16 +46,17 @@ void audio_wav_init(uint16_t samplerate);
 void audio_morse_init(uint16_t pitch, uint8_t wpm);
 
 /* Prepare first sample/morse character to play, unmute and start needed timers */
-void audio_start();
+#define audio_play audio_start
+void audio_start(void);
 
 /* Stop both timers and reset AD to middle position + mute */
-void audio_stop();
+void audio_stop(void);
 
 /* Is the buffer full? */
-uint8_t audio_buffer_full();
+uint8_t audio_buffer_full(void);
 
 /* Empty the buffer */
-void audio_buffer_clear();
+void audio_buffer_clear(void);
 
 /* Feed the buffer with wav data */
 void audio_wav_data(uint8_t sample);

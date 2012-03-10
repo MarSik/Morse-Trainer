@@ -5,8 +5,10 @@
 #include "dac.h"
 #include "sine.h"
 
-volatile void (*next_sample)(); /* pointer to proper next sample method */
-volatile void (*morse_space)(); /* pointer to method which sets output to space in morse mode */
+typedef void (*int_routine)(void);
+
+volatile int_routine next_sample; /* pointer to proper next sample method */
+volatile int_routine morse_space; /* pointer to method which sets output to space in morse mode */
 
 volatile uint8_t sine_id;
 
@@ -17,7 +19,8 @@ uint16_t dit_length;      /* number of sample clock cycles for one dit */
 /* interrupt which outputs next wavetable value and resets the timer */
 ISR(TIMER0_COMPA_vect)
 {
-    TCNT0 = 0;
+    TCNT0H = 0;
+    TCNT0L = 0;
 
     uint8_t v = sine(sine_id);
 
@@ -49,7 +52,7 @@ volatile struct _buffer_pointers {
 
 
 /* outputs next wav sample and moves buffer pointer */
-void sample_wav()
+void sample_wav(void)
 {
     if (buffer.first == buffer.empty) return;
     dac_begin();
@@ -60,7 +63,7 @@ void sample_wav()
 
 /* configure next dit/dah and space to sampling timer
    and when at the end of character move buffer pointer to next char */
-void sample_morse()
+void sample_morse(void)
 {
     if (buffer.first == buffer.empty) return;
 
@@ -105,11 +108,12 @@ void sample_morse()
     dac_end();
 
     /* reset wavetable */
-    TCNT0 = 0;
+    TCNT0H = 0;
+    TCNT0L = 0;
     sine_id = 0;
 }
 
-void output_space()
+void output_space(void)
 {
     /* stop sound, output morse space */
     dac_mute();
@@ -124,7 +128,7 @@ void audio_wav_init(uint16_t samplerate)
 {
     audio_buffer_clear();
     morse_space = NULL;
-    next_sample = sample_wav;
+    next_sample = &sample_wav;
 
     /*
        sampling timer
@@ -184,8 +188,8 @@ void audio_wav_init(uint16_t samplerate)
 void audio_morse_init(uint16_t pitch, uint8_t wpm)
 {
     audio_buffer_clear();
-    morse_space = output_space;
-    next_sample = sample_morse;
+    morse_space = &output_space;
+    next_sample = &sample_morse;
     sine_id = 0;
 
     /*
@@ -245,7 +249,8 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm)
     OCR0B = (F_CPU / (pitch * sine_len)) >> 8;
     OCR0A = (F_CPU / (pitch * sine_len)) && 0xff; /* TOP value for the wavetable timer */
 
-    TCNT0 = 0; /* actual counter value */
+    TCNT0H = 0;
+    TCNT0L = 0; /* actual counter value */
 
     TIMSK |= _BV(OCIE0A);
 }

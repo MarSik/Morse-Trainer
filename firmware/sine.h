@@ -1,6 +1,8 @@
 #ifndef __MT_sine_MS_20120309_
 #define __MT_sine_MS_20120309_
 
+#include <avr/eeprom.h>
+
 /* one quarter (0 - 90deg) of sine function */
 uint8_t sine_table[] EEMEM = {
     0,   /* 0.000000 */
@@ -33,7 +35,7 @@ uint8_t inline sine(uint8_t id) {
 
     if(q == 0) return 128 + sine_table[id];
     else if (q == 1) return 128 + sine_table[sine_table_len - id];
-    else if (q == 2) return 128 - sine_table[id);
+    else if (q == 2) return 128 - sine_table[id];
     else if (q == 3) return 128 - sine_table[sine_table_len - id];
 }
 

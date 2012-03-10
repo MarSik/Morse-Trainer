@@ -7,11 +7,11 @@
 #define DAC_CS 0
 
 /* initializes dac during bootup */
-void dac_init();
+void dac_init(void);
 
 /* before anything can be done, dac has to be selected using dac_begin */
-void dac_begin();
-void dac_end();
+void dac_begin(void);
+void dac_end(void);
 
 /* set audio volume 0 - 255 */
 void dac_volume(uint8_t vol);
@@ -20,7 +20,7 @@ void dac_volume(uint8_t vol);
 void dac_output(uint8_t value);
 
 /* mute/unmute but remember volume */
-void dac_mute();
-void dac_unmute();
+void dac_mute(void);
+void dac_unmute(void);
 
 #endif /* __MT_dac_MS_20120309_ */

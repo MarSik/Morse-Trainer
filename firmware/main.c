@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/sleep.h>
+#include <stdlib.h>
 
 #include "dac.h"
 #include "flash.h"
@@ -10,7 +11,7 @@
 void setup(void)
 {
     /* setup SPI ports */
-    DDRB |= _BV(MOSI) | _BV(SCK);
+    DDRB |= _BV(PB0) | _BV(PB2);
     PORTB = 0;
 
     dac_init();

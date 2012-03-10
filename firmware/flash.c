@@ -2,6 +2,7 @@
 #include "flash.h"
 
 #define FLASH_READ 0x03 /* followed by 3 bytes of address */
+#define FLASH_ENTRY_LEN 5 /* number of bytes for one character in address table */
 
 void flash_init()
 {
@@ -42,7 +43,7 @@ void inline flash_send(uint8_t data)
     }
 }
 
-void flash_read_init(uint8_t addr2, uint8_t addr1, uint8_t addr0);
+void flash_read_init(uint8_t addr2, uint8_t addr1, uint8_t addr0)
 {
     flash_send(FLASH_READ);
     flash_send(addr2);
@@ -50,7 +51,7 @@ void flash_read_init(uint8_t addr2, uint8_t addr1, uint8_t addr0);
     flash_send(addr0);
 }
 
-uint16_t flash_info(uint8_t id, uint8_t &a2, uint8_t &a1, uint8_t &a0)
+uint16_t flash_info(uint8_t id, uint8_t *a2, uint8_t *a1, uint8_t *a0)
 {
     uint16_t addr = FLASH_ENTRY_LEN*id;
     uint16_t len;

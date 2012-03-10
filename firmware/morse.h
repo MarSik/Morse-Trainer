@@ -1,6 +1,8 @@
 #ifndef __MT_morse_20120309__
 #define __MT_morse_20120309__
 
+#include <avr/eeprom.h>
+
 #define dit 0
 #define di dit
 #define DAH 1
