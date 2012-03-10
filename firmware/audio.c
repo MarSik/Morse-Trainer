@@ -9,8 +9,10 @@ volatile void (*next_sample)(); /* pointer to proper next sample method */
 volatile void (*morse_space)(); /* pointer to method which sets output to space in morse mode */
 
 volatile uint8_t sine_id;
-uint8_t sample_clock;
-uint8_t wavetable_clock;
+
+uint8_t sample_clock;     /* configuration for sample clock prescaler */
+uint8_t wavetable_clock;  /* configuration for wavetable clock prescaler */
+uint16_t dit_length;      /* number of sample clock cycles for one dit */
 
 /* interrupt which outputs next wavetable value and resets the timer */
 ISR(TIMER0_COMPA_vect)
@@ -87,8 +89,8 @@ void sample_morse()
     else l.space = 1; // one space after didah
 
     /* setup sampling timer to output symbol and space */
-    OCR0A = XXX; /* length of symbol + space */
-    OCR0B = XXX; /* length of symbol */
+    OCR0A = (l.space + l.symbol) * dit_length; /* length of symbol + space */
+    OCR0B = l.symbol * dit_length; /* length of symbol */
     
     /* reset timer and start outputing sound */
     dac_unmute();
@@ -128,10 +130,25 @@ void audio_wav_init(uint16_t samplerate)
     TCCR1D = 0;
 
     PLLCSR = 0; /* disable PLL */
-    sample_clock = XXX; /* clock select */
 
-    TC1H = 0;
-    OCR1C = 0; /* one sample */
+    /*
+      compute settings for sample timer
+      
+      first, we need number of cpu cycles per sample
+      then we need to set prescaler to reduce the number under 1024 (10bits)
+    */
+    uint16_t cyclespersample;
+
+    cyclespersample = F_CPU / samplerate;
+    sample_clock = 1; /* clock select */
+
+    while (cyclespersample > 1023) {
+        cyclespersample >>= 1;
+        sample_clock++; //increase prescaler divider (+1 multiplies prescaler by 2)
+    }
+
+    TC1H = cyclespersample >> 8;
+    OCR1C = cyclespersample & 0xff; /* cycles per one sample */
 
     /* enable only overflow interrupt */
     TIMSK &= ~_BV(OCIE1A);
@@ -167,7 +184,26 @@ void audio_morse_init(uint16_t pitch, uint8_t speed)
     TCCR1D = 0;
 
     PLLCSR = 0; /* disable PLL */
-    sample_clock = XXX; /* clock select */
+
+    /* we need to set the timer so have ten possible lengths, where each is
+       as long as needed by the specified WPM.
+
+       1 WPM = 50 dits per minute
+       So compute number of cycles per dit (has to be 3 or more)
+       
+       max speed will be 60 wpm = 1 dit per  20ms = 160000 cycles
+       min speed will be  5 wpm = 1 dit per 240ms = 1920000 cycles
+
+       with prescaler 256 it is:
+          60 wpm = 625  cycles per 1 dit
+          30 wpm = 1250  -"-
+          20 wpm = 1875  -"-
+          10 wpm = 3750  -"-
+           3 wpm = 12500 -"-
+           1 wpm = 37500 -"-
+    */
+    sample_clock = 0b1001; /* clock select (prescaler 256) */
+    dit_length = 37500 / wpm; /* number of timer cycles for one dit at given speed */ 
 
     TC1H = 0;
     OCR1A = 0; /* symbol length */
