@@ -21,8 +21,17 @@ int main(void)
 {
     setup();
 
+    audio_morse_init(600, 10);
+
+    while(!audio_buffer_full())
+        audio_morse_data(4, 0b00001000, 7);
+
+    dac_volume(255);
+    audio_play();
+
     while(1) {
-        loop();
+        while(audio_buffer_full());
+        audio_morse_data(4, 0b00001000, 7);
     }
 
     return 0;
