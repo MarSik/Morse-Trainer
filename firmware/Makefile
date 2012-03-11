@@ -1,9 +1,9 @@
 # Target device
 MCU = attiny861
 F_CPU = 8000000
-LFUSE = 0xE1
-HFUSE = 0xDD
-EFUSE = 0xFF
+LFUSE = 0xE2
+HFUSE = 0xDF
+EFUSE = 0x01
 
 # Application files and targets
 TARGET = morse

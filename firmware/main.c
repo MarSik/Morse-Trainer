@@ -10,10 +10,12 @@
 
 void setup(void)
 {
-    /* setup SPI ports */
-    DDRB |= _BV(PB0) | _BV(PB2);
-    PORTB = 0;
+    /* setup MOSI/SCK ports */
+    DDRB |= _BV(DDB1) | _BV(DDB2);
+    PORTB &= ~_BV(PB1) & ~_BV(PB2);
+    USIPP = 0;
 
+    /* initialize subsystem interfaces */
     dac_init();
     flash_init();
 }
@@ -21,7 +23,7 @@ void setup(void)
 int main(void)
 {
     setup();
-
+    
     audio_morse_init(600, 10);
 
     while(!audio_buffer_full())
@@ -34,6 +36,6 @@ int main(void)
         while(audio_buffer_full());
         audio_morse_data(morse_table[25*3], morse_table[25*3+2], 7);
     }
-
+    
     return 0;
 }

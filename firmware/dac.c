@@ -45,8 +45,6 @@ void dac_begin()
 
     // CS active low
     DAC_PORT &= ~_BV(DAC_CS);
-
-    // set SPI done interrupt
 }
 
 

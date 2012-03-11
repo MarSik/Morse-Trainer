@@ -4,7 +4,7 @@
 /* ports */
 #define FLASH_DDR DDRB
 #define FLASH_PORT PORTB
-#define FLASH_CS 3
+#define FLASH_CS PB3
 
 /* initialization to proper state at boot */
 void flash_init(void);
