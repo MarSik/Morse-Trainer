@@ -105,6 +105,7 @@ void dac_init()
 
     /* full output, middle level */
     dac_volume(255);
+    dac_unmute();
     dac_begin();
     dac_output(128);
     dac_end();

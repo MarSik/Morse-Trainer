@@ -37,7 +37,7 @@
 */
 
 /* number of buffer bytes, must be even number */
-#define AUDIO_BUFFER_SIZE 32
+#define AUDIO_BUFFER_SIZE 16
 
 /* Initialize sampling timer for audio */
 void audio_wav_init(uint16_t samplerate);
@@ -53,15 +53,15 @@ void audio_start(void);
 void audio_stop(void);
 
 /* Is the buffer full? */
-uint8_t audio_buffer_full(void);
+uint8_t audio_buffer_full(uint8_t needed);
 
 /* Empty the buffer */
 void audio_buffer_clear(void);
 
 /* Feed the buffer with wav data */
-void audio_wav_data(uint8_t sample);
+uint8_t audio_wav_data(uint8_t sample);
 
 /* Add morse symbol and following space to buffer */
-void audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space);
+uint8_t audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space);
 
 #endif /* __MT_audio_MS_20120309_ */

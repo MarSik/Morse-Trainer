@@ -26,15 +26,18 @@ int main(void)
     
     audio_morse_init(600, 10);
 
-    while(!audio_buffer_full())
-        audio_morse_data(morse_table[25*3], morse_table[25*3+2], 7);
+    uint8_t v_bitmask = eeprom_read_byte(morse_table + 25*3 + 2);
+    uint8_t v_length = eeprom_read_byte(morse_table + 25*3);
+
+    /* fill the buffer */
+    while(audio_morse_data(v_length, v_bitmask, 7));
 
     dac_volume(255);
     audio_play();
 
     while(1) {
-        while(audio_buffer_full());
-        audio_morse_data(morse_table[25*3], morse_table[25*3+2], 7);
+        while(audio_buffer_full(2));
+        audio_morse_data(v_length, v_bitmask, 7);
     }
     
     return 0;

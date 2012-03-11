@@ -27,7 +27,7 @@ ISR(TIMER0_COMPA_vect)
     dac_output(v);
     dac_end();
 
-    sine_id = sine_id % sine_len;
+    sine_id = (sine_id + 1) % sine_len;
 }
 
 /* interrupt which sets output to morse space */
@@ -104,13 +104,13 @@ void sample_morse(void)
     /* reset timer and start outputing sound */
     dac_unmute();
     dac_begin();
-    dac_output(sine(0));
+    sine_id = 0;
+    dac_output(sine(sine_id++));
     dac_end();
 
     /* reset wavetable */
     TCNT0H = 0;
     TCNT0L = 0;
-    sine_id = 0;
 }
 
 void inline output_space(void)
@@ -258,12 +258,10 @@ void audio_start()
 {
     dac_unmute();
 
-    dac_begin();
-    dac_output(sine(0));
-    dac_end();
-
     TCCR1B = sample_clock;
     TCCR0B = wavetable_clock;
+
+    next_sample();
 }
 
 /* Stop both timers and reset AD to middle position + mute */
@@ -280,35 +278,39 @@ void audio_stop()
 }
 
 /* Is the buffer full? */
-uint8_t inline audio_buffer_full()
+uint8_t audio_buffer_full(uint8_t needed)
 {
-    return buffer.first == ((buffer.empty + 1) % AUDIO_BUFFER_SIZE);
+    return ((buffer.empty + needed) % AUDIO_BUFFER_SIZE) == buffer.first;
 }
 
 /* Empty the buffer */
 void audio_buffer_clear()
 {
-    buffer.first=0;
-    buffer.empty=0;
+    buffer.first = 0;
+    buffer.empty = 0;
 }
 
 /* Feed the buffer with wav data */
-void audio_wav_data(uint8_t sample)
+uint8_t audio_wav_data(uint8_t sample)
 {
-    if (audio_buffer_full()) return;
+    if (audio_buffer_full(1)) return 0;
 
     buffer_data[buffer.empty] = sample;
     buffer.empty = (buffer.empty + 1) % AUDIO_BUFFER_SIZE;
+
+    return 1;
 }
 
 /* Add morse symbol and following space to buffer */
-void audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space)
+uint8_t audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space)
 {
-    if (audio_buffer_full()) return;
+    if (audio_buffer_full(2)) return 0;
 
-    buffer_data[buffer.empty] = space << 4 | len;
+    buffer_data[buffer.empty] = (space << 4) | len;
     buffer.empty = (buffer.empty + 1) % AUDIO_BUFFER_SIZE;
 
     buffer_data[buffer.empty] = bitmask;
     buffer.empty = (buffer.empty + 1) % AUDIO_BUFFER_SIZE;
+
+    return 2;
 }
