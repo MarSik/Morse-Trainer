@@ -246,6 +246,11 @@ uint8_t audio_buffer_full(uint8_t needed)
     return ((buffer.empty + needed) % AUDIO_BUFFER_SIZE) == buffer.first;
 }
 
+uint8_t audio_buffer_empty(void)
+{
+    return buffer.first == buffer.empty;
+}
+
 /* Empty the buffer */
 void audio_buffer_clear()
 {

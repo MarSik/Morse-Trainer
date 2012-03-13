@@ -58,6 +58,9 @@ void audio_stop(void);
 /* Is the buffer full? */
 uint8_t audio_buffer_full(uint8_t needed);
 
+/* Is the buffer empty */
+uint8_t audio_buffer_empty(void);
+
 /* Empty the buffer */
 void audio_buffer_clear(void);
 
