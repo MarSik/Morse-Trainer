@@ -6,12 +6,20 @@
 #define FLASH_PORT PORTB
 #define FLASH_CS PB3
 
+#define FLASH_HOLD_DDR DDRA
+#define FLASH_HOLD_PORT PORTA
+#define FLASH_HOLD PA1
+
 /* initialization to proper state at boot */
 void flash_init(void);
 
 /* flash has to be selected by flash_begin before any operation takes place */
 void flash_begin(void);
 void flash_end(void);
+
+/* save SPI state and data to allow some other SPI operation to take place */
+void flash_pause(void);
+void flash_unpause(void);
 
 /* get address <a2,a1,a0> and length <ret value> of record with id <id> */   
 uint16_t flash_info(uint8_t id, uint8_t *a2, uint8_t *a1, uint8_t *a0);
