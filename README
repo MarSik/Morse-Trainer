@@ -55,7 +55,7 @@ Morse table:
   ID<7:0> is index to the table with audio recordings (and also ascii representation where applicable)
   D<7:0> are dit/dahs - 0 = dit and 1 = dah, only L least significant bits are used, D0 is played first
 
-  the table will be constructed using macro MORSE(<L>, <ID>, DIT, DAH, ...)
+  the table will be constructed using macro MORSE(<ID>, DIT, DAH, ...)
 
 Changelog
 =========

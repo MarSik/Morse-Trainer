@@ -7,7 +7,6 @@
 #include "flash.h"
 #include "audio.h"
 #include "morse.h"
-#include "sine.h"
 
 void setup(void)
 {

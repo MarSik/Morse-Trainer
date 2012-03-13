@@ -2,7 +2,7 @@ This directory contains audio data for the morse trainer project.
 
 Index table file (table_vX.Y.rom) contains (start, length) pairs for every sound sample. The table capacity is 256 samples and firmware accesses the table using mostly ascii compatible values. Start value is 3 Bytes long and contains absolute address of the sample's beginning (including the 1280B occupied by the index table itself). Length is 2 Bytes long and hold the number of audio bytes occupied by the respective sample.
 
-The index table can be edited using table.py script. Just start ./table.py <tablefile> and then select character to edit and enter new start and length values.
+The index table can be edited using table.py script. Just start ./table.py <tablefile> and then select character to edit and enter new start and length values of audio sample (without the 1280B offset).
 
 Currently lowercase letter positions are reserved for spoken version of the letter and uppercase letter positions for name representation of the letter.
 
