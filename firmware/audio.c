@@ -9,26 +9,8 @@ typedef void (*int_routine)(void);
 
 volatile int_routine next_sample; /* pointer to proper next sample method */
 
-volatile uint8_t sine_id;
-
 uint8_t sample_clock;     /* configuration for sample clock prescaler */
-uint8_t wavetable_clock;  /* configuration for wavetable clock prescaler */
 uint16_t dit_length;      /* number of sample clock cycles for one dit */
-
-/* interrupt which outputs next wavetable value and resets the timer */
-ISR(TIMER0_COMPA_vect)
-{
-    TCNT0H = 0;
-    TCNT0L = 0;
-
-    uint8_t v = sine(sine_id);
-
-    dac_begin();
-    dac_output(v);
-    dac_end();
-
-    sine_id = (sine_id + 1) % sine_len;
-}
 
 /* interrupt which sets output to morse space */
 void inline output_space(void);
@@ -101,26 +83,16 @@ void sample_morse(void)
     TC1H = len >> 8;
     OCR1A = len & 0xff;
 
-    /* reset timer and start outputing sound */
+    /* start outputing sound */
     dac_unmute();
-    dac_begin();
-    sine_id = 0;
-    dac_output(sine(sine_id++));
-    dac_end();
-
-    /* reset wavetable */
-    TCNT0H = 0;
-    TCNT0L = 0;
+    sine_start();
 }
 
 void inline output_space(void)
 {
     /* stop sound, output morse space */
     dac_mute();
-
-    dac_begin();
-    dac_output(sine(0));
-    dac_end();
+    sine_stop();
 }
 
 /* Initialize sampling timer for audio */
@@ -167,12 +139,9 @@ void audio_wav_init(uint16_t samplerate)
 
 
     /*
-      wavetable timer is disabled
+      sine output is disabled
     */
-    TCCR0A = 0;
-    TCCR0B = 0;
-    wavetable_clock = 0;
-    TIMSK &= ~_BV(OCIE0A);
+    sine_deinit();
 }
 
 /* Initialize sampling/wavetable timer for morse output
@@ -188,7 +157,6 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm)
 {
     audio_buffer_clear();
     next_sample = &sample_morse;
-    sine_id = 0;
 
     /*
        sampling timer
@@ -235,22 +203,8 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm)
     /* enable compareA and overflow interrupts */
     TIMSK |= _BV(OCIE1A) | _BV(TOIE1);
 
-    /* 
-       wavetable timer
-       timer0 16bit mode
-       compare A resets the timer to 0
-    */
-    TCCR0A = _BV(TCW0);
-    TCCR0B = 0;
-
-    wavetable_clock = 0b001; /* prescaler 1 */
-    OCR0B = (F_CPU / (pitch * sine_len)) >> 8;
-    OCR0A = (F_CPU / (pitch * sine_len)) && 0xff; /* TOP value for the wavetable timer */
-
-    TCNT0H = 0;
-    TCNT0L = 0; /* actual counter value */
-
-    TIMSK |= _BV(OCIE0A);
+    /* initialize sinewave generator */
+    sine_init(pitch);
 }
 
 /* unmute and start needed timers */
@@ -259,7 +213,6 @@ void audio_start()
     dac_unmute();
 
     TCCR1B = sample_clock;
-    TCCR0B = wavetable_clock;
 
     next_sample();
 }
@@ -271,10 +224,7 @@ void audio_stop()
     TCCR0B = 0;
 
     dac_mute();
-
-    dac_begin();
-    dac_output(sine(0));
-    dac_end();
+    sine_stop();
 }
 
 /* Is the buffer full? */

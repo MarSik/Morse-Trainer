@@ -13,11 +13,11 @@ CINCS =
 CXXINCS = 
 
 # Place extra C/CXX arguments here
-CEXTRA = 
+CEXTRA =
 CXXEXTRA = 
 
 # Source files for C compiler
-SRC = main.c dac.c audio.c flash.c
+SRC = main.c dac.c audio.c flash.c sine.c
 
 # Source files for C++ compiler
 CXXSRC = 
