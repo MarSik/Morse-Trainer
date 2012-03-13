@@ -7,6 +7,7 @@
 #include "flash.h"
 #include "audio.h"
 #include "morse.h"
+#include "sine.h"
 
 void setup(void)
 {
@@ -24,12 +25,12 @@ int main(void)
 {
     setup();
     
-    audio_morse_init(600, 10);
+    audio_morse_init(600, 6);
 
-    uint8_t v_bitmask = eeprom_read_byte(morse_table + 25*3 + 2);
-    uint8_t v_length = eeprom_read_byte(morse_table + 25*3);
+    uint8_t v_bitmask = MORSE_MASK(25);
+    uint8_t v_length = MORSE_LEN(25);
 
-    /* fill the buffer */
+    // fill the buffer
     while(audio_morse_data(v_length, v_bitmask, 7));
 
     dac_volume(255);
@@ -39,6 +40,6 @@ int main(void)
         while(audio_buffer_full(2));
         audio_morse_data(v_length, v_bitmask, 7);
     }
-    
+
     return 0;
 }

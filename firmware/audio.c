@@ -14,6 +14,7 @@ uint16_t dit_length;      /* number of sample clock cycles for one dit */
 
 /* interrupt which sets output to morse space */
 void inline output_space(void);
+
 ISR(TIMER1_COMPA_vect)
 {
     output_space();
@@ -75,13 +76,18 @@ void sample_morse(void)
 
     /* setup sampling timer to output symbol and space */
     uint16_t len;
-    len = (l.space + l.symbol) * dit_length; /* length of symbol + space */
-    TC1H = len >> 8;
-    OCR1C = len & 0xff;
-
     len = l.symbol * dit_length; /* length of symbol */
+
+    cli();
     TC1H = len >> 8;
     OCR1A = len & 0xff;
+    sei();
+
+    len = (l.space + l.symbol) * dit_length; /* length of symbol + space */
+    cli();
+    TC1H = len >> 8;
+    OCR1C = len & 0xff;
+    sei();
 
     /* start outputing sound */
     dac_unmute();
@@ -120,9 +126,7 @@ void audio_wav_init(uint16_t samplerate)
       first, we need number of cpu cycles per sample
       then we need to set prescaler to reduce the number under 1024 (10bits)
     */
-    uint16_t cyclespersample;
-
-    cyclespersample = F_CPU / samplerate;
+    uint16_t cyclespersample = F_CPU / samplerate;
     sample_clock = 1; /* clock select */
 
     while (cyclespersample > 1023) {
@@ -130,8 +134,10 @@ void audio_wav_init(uint16_t samplerate)
         sample_clock++; //increase prescaler divider (+1 multiplies prescaler by 2)
     }
 
+    cli();
     TC1H = cyclespersample >> 8;
     OCR1C = cyclespersample & 0xff; /* cycles per one sample */
+    sei();
 
     /* enable only overflow interrupt */
     TIMSK &= ~_BV(OCIE1A);
@@ -180,17 +186,24 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm)
        max speed will be 60 wpm = 1 dit per  20ms = 160000 cycles
        min speed will be  5 wpm = 1 dit per 240ms = 1920000 cycles
 
-       with prescaler 1024 it is:
-          60 wpm = 156.4  cycles per 1 dit
-          30 wpm = 312.5  -"-
-          20 wpm = 438.75 -"-
-          10 wpm = 937.5  -"-
-           3 wpm = 3125   -"-
-           1 wpm = 9375   -"-
-    */
-    sample_clock = 0b1011; /* clock select (prescaler 1024) */
-    dit_length = 9375 / wpm; /* number of timer cycles for one dit at given speed */ 
+       with prescaler 16384 it is:
+          60 wpm = 10   cycles per 1 dit
+          30 wpm = 20     -"-
+          20 wpm = 29     -"-
+          10 wpm = 59     -"-
+           6 wpm = 98     -"-
+           3 wpm = 195    -"-
+           1 wpm = 586    -"-
 
+       timer has to be able to count to ten dits (dash + long pause)
+       as it has 10bit precision, the maximum dit can be only 102 cycles long
+
+       minimum supported speed is then 6 wpm
+    */
+    sample_clock = 0b1111; /* clock select (prescaler 16384) */
+    dit_length = 586 / wpm; /* number of timer cycles for one dit at given speed */ 
+
+    cli();
     TC1H = 0;
     OCR1A = 0; /* symbol length */
 
@@ -199,6 +212,7 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm)
 
     TC1H = 0;
     TCNT1 = 0; /* actual counter value */ 
+    sei();
 
     /* enable compareA and overflow interrupts */
     TIMSK |= _BV(OCIE1A) | _BV(TOIE1);
@@ -207,14 +221,13 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm)
     sine_init(pitch);
 }
 
-/* unmute and start needed timers */
+/* unmute, load first sample and start needed timers */
 void audio_start()
 {
     dac_unmute();
+    next_sample();
 
     TCCR1B = sample_clock;
-
-    next_sample();
 }
 
 /* Stop both timers and reset AD to middle position + mute */
@@ -256,7 +269,7 @@ uint8_t audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space)
 {
     if (audio_buffer_full(2)) return 0;
 
-    buffer_data[buffer.empty] = (space << 4) | len;
+    buffer_data[buffer.empty] = (space << 4) | (len & 0xf);
     buffer.empty = (buffer.empty + 1) % AUDIO_BUFFER_SIZE;
 
     buffer_data[buffer.empty] = bitmask;

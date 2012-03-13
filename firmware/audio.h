@@ -42,7 +42,10 @@
 /* Initialize sampling timer for audio */
 void audio_wav_init(uint16_t samplerate);
 
-/* Initialize sampling/wavetable timer for morse output */
+/* Initialize sampling/wavetable timer for morse output
+   supported pitch 200 - 1000 Hz 
+   supported wpm 6 - 60 WPM
+*/
 void audio_morse_init(uint16_t pitch, uint8_t wpm);
 
 /* Prepare first sample/morse character to play, unmute and start needed timers */

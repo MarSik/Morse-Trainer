@@ -8,6 +8,12 @@
 #define DAH 1
 
 /*
+  access macros to get morse bitmask, length and represented ascii char */
+#define MORSE_LEN(id) (eeprom_read_byte(morse_table + (id)*3) + 1)
+#define MORSE_ID(id) eeprom_read_byte(morse_table + (id)*3 + 1)
+#define MORSE_MASK(id) eeprom_read_byte(morse_table + (id)*3 + 2)
+
+/*
   Here is a macro *hack* which enables us to write more natural definitions
   in the form of MORSE('a', DIT, DAH) without having to think about the number
   of di-dahs for different symbols.
