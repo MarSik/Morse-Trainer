@@ -93,4 +93,6 @@ MORSE_TABLE(morse_table) EEMEM = {
     MORSE('E', di, di, di, di, di, di, di, dit) //error
 };
 
+#define MORSE_TABLE_LEN 43
+
 #endif /* __MT_morse_20120309__ */
