@@ -31,7 +31,7 @@ int main(void)
     uint8_t a2,a1,a0;
     uint16_t l;
 
-    dac_volume(100);
+    dac_volume(5);
     c = 0;
 
     while(1) {
@@ -46,7 +46,7 @@ int main(void)
         // add morse data to buffer and play it 
         audio_morse_data(v_length, v_bitmask, 7);
         audio_play();
-        while(!audio_buffer_empty());
+        while(!audio_buffer_empty() || !audio_buffer_finished());
         audio_stop();
 
         _delay_ms(500);
@@ -55,7 +55,11 @@ int main(void)
         audio_wav_init(8000);
 
         // get sound data for morse char
+        flash_begin();
         l = flash_info(v_id, &a2, &a1, &a0);
+        flash_end();
+
+        flash_begin();
         flash_read_init(a2, a1, a0);
 
         // prefill buffer
@@ -73,9 +77,10 @@ int main(void)
             audio_wav_data(flash_read());
             l--;
         }
+        flash_end();
 
         // wait till everything is played
-        while(!audio_buffer_empty());
+        while(!audio_buffer_empty() || !audio_buffer_finished());
         audio_stop();
 
         _delay_ms(500);

@@ -61,6 +61,9 @@ uint8_t audio_buffer_full(uint8_t needed);
 /* Is the buffer empty */
 uint8_t audio_buffer_empty(void);
 
+/* After last sample was played, there was nothing to play in the buffer */
+uint8_t audio_buffer_finished(void);
+
 /* Empty the buffer */
 void audio_buffer_clear(void);
 

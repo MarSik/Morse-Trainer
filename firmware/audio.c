@@ -31,13 +31,17 @@ volatile uint8_t buffer_data[AUDIO_BUFFER_SIZE];
 volatile struct _buffer_pointers {
     uint8_t first:4; /* points at the first valid item */
     uint8_t empty:4; /* points at the first available space */
+    uint8_t finished:1; /* there was nothing to play when next_sample was started */
 } buffer;
 
 
 /* outputs next wav sample and moves buffer pointer */
 void sample_wav(void)
 {
-    if (buffer.first == buffer.empty) return;
+    if (buffer.first == buffer.empty) {
+        buffer.finished = 1;
+        return;
+    }
     dac_begin();
     dac_output(buffer_data[buffer.first]);
     dac_end();
@@ -48,7 +52,10 @@ void sample_wav(void)
    and when at the end of character move buffer pointer to next char */
 void sample_morse(void)
 {
-    if (buffer.first == buffer.empty) return;
+    if (buffer.first == buffer.empty) {
+        buffer.finished = 1;
+        return;
+    }
 
     uint8_t bitmask_id = (buffer.first + 1) % AUDIO_BUFFER_SIZE;
 
@@ -227,6 +234,7 @@ void audio_start()
     dac_unmute();
     next_sample();
 
+    buffer.finished = 0;
     TCCR1B = sample_clock;
 }
 
@@ -251,6 +259,11 @@ uint8_t audio_buffer_empty(void)
     return buffer.first == buffer.empty;
 }
 
+uint8_t audio_buffer_finished(void)
+{
+    return buffer.finished;
+}
+
 /* Empty the buffer */
 void audio_buffer_clear()
 {
@@ -263,6 +276,8 @@ uint8_t audio_wav_data(uint8_t sample)
 {
     if (audio_buffer_full(1)) return 0;
 
+    buffer.finished = 0;
+
     buffer_data[buffer.empty] = sample;
     buffer.empty = (buffer.empty + 1) % AUDIO_BUFFER_SIZE;
 
@@ -273,6 +288,8 @@ uint8_t audio_wav_data(uint8_t sample)
 uint8_t audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space)
 {
     if (audio_buffer_full(2)) return 0;
+
+    buffer.finished = 0;
 
     buffer_data[buffer.empty] = (space << 4) | (len & 0xf);
     buffer.empty = (buffer.empty + 1) % AUDIO_BUFFER_SIZE;
