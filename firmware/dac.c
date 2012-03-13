@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include "flash.h"
 #include "dac.h"
 
 /* protocol:
@@ -36,14 +37,7 @@ struct{
 
 void dac_begin()
 {
-    // SPI mode data clocked in on positive edge
-    //          data read on following negative edge
-    //          USI uses PORTB
-    //          USI uses software clock USICLK/USITC
-    USICR = _BV(USIWM0);
-    USIPP &= ~_BV(USIPOS);
-
-    // CS active low
+    flash_pause();
     DAC_PORT &= ~_BV(DAC_CS);
 }
 
@@ -51,6 +45,7 @@ void dac_begin()
 void dac_end()
 {
     DAC_PORT |= _BV(DAC_CS);
+    flash_unpause();
 }
 
 void dac_volume(uint8_t vol)
