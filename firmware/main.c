@@ -111,12 +111,13 @@ uint8_t play_morse(uint8_t *chs)
 
     // prefill buffer
     while (*chs && !audio_buffer_full(2)) {
-        uint8_t v_bitmask = MORSE_MASK(*chs);
-        uint8_t v_length = MORSE_LEN(*chs);
-        v_id = MORSE_ID(*chs);
+        uint8_t v_idx = morse_find(*chs);
+        v_id = MORSE_ID(v_idx);
+        uint8_t v_bitmask = MORSE_MASK(v_idx);
+        uint8_t v_length = MORSE_LEN(v_idx);
 
         // add morse data to buffer and play it 
-        audio_morse_data(v_length, v_bitmask, 7);
+        if(v_id) audio_morse_data(v_length, v_bitmask, 7);
 
         chs++;
     }
@@ -125,10 +126,10 @@ uint8_t play_morse(uint8_t *chs)
 
     // keep buffer filled
     while (*chs) {
-        uint8_t c = *chs;
-        uint8_t v_bitmask = MORSE_MASK(c);
-        uint8_t v_length = MORSE_LEN(c);
-        v_id = MORSE_ID(c);
+        uint8_t v_idx = morse_find(*chs);
+        v_id = MORSE_ID(v_idx);
+        uint8_t v_bitmask = MORSE_MASK(v_idx);
+        uint8_t v_length = MORSE_LEN(v_idx);
 
         while(audio_buffer_full(2)); // wait till there is some space in the buffer
 
@@ -161,9 +162,12 @@ int main(void)
     _delay_ms(1500);
 
     while(1) {
-        uint8_t s[] = {c, 0x0};
+        if (MORSE_ID(c) == 0) c = 0;
+        uint8_t s[] = {MORSE_ID(c), 0x0};
         uint8_t v_id = play_morse(s);
-        c = (c + 1) % MORSE_TABLE_LEN;
+
+        c++;
+
         if (v_id) {
             play_character(v_id);
             _delay_ms(4000);
