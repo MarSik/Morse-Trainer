@@ -9,6 +9,7 @@ samplerate_out = int(sys.argv[4])
 
 ratio = float(samplerate_out) / samplerate_in
 
+# 256 characters * 5 Bytes
 offset = 256*5
 
 table = open(f, "rb", 0)
@@ -28,8 +29,15 @@ for ch in range(256):
         if oldstart<0:
             oldstart = 0
         
-        start = int(round(offset + oldstart*ratio))
-        delka = int(round(olddelka * ratio))
+        if ch == 0:
+            if olddelka != samplerate_in:
+                print "Source data have different samplerate %d than indicated %d" % (olddelka, samplerate_in)
+                sys.exit(1)
+            delka = samplerate_out
+            start = 0
+        else:
+            start = int(round(offset + oldstart*ratio))
+            delka = int(round(olddelka * ratio))
 
         print "%02x '%c' %06d<%05d> -> %06d<%05d>" % (ch, chr(ch), oldstart, olddelka, start - offset, delka)
         

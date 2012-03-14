@@ -12,7 +12,14 @@ try:
     while True:
         try:
             ch = raw_input("znak> ")
-            ch = ord(ch[0])
+            if ch.startswith("0x"):
+                ch = int(ch[2:], 16)
+            else:
+                ch = ord(ch[0])
+
+            if ch>256 or ch<0:
+                print "Character out of range, please type one character of 0xHH id"
+                continue
 
             table.seek(ch * 5, 0)
 
