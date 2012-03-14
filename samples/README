@@ -6,6 +6,8 @@ The index table can be edited using table.py script. Just start ./table.py <tabl
 
 Currently lowercase letter positions are reserved for spoken version of the letter and uppercase letter positions for name representation of the letter.
 
+Position number 0x00 stores the samplerate of the audio in it's length field.
+
 Sample file (czech_vX.Y.rom) cotains raw audio data encoded as 8000kHz samplerate, 8bit mono audio stream.
 
  
