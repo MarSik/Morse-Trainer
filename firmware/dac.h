@@ -2,9 +2,9 @@
 #define __MT_dac_MS_20120309_
 
 /* ports */
-#define DAC_DDR DDRA
-#define DAC_PORT PORTA
-#define DAC_CS 0
+#define DAC_DDR DDRB
+#define DAC_PORT PORTB
+#define DAC_CS 3
 
 /* initializes dac during bootup */
 void dac_init(void);

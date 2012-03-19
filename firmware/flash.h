@@ -2,9 +2,9 @@
 #define __MT_flash_H_MS_20120309_
 
 /* ports */
-#define FLASH_DDR DDRB
-#define FLASH_PORT PORTB
-#define FLASH_CS PB3
+#define FLASH_DDR DDRA
+#define FLASH_PORT PORTA
+#define FLASH_CS PA0
 
 #define FLASH_HOLD_DDR DDRA
 #define FLASH_HOLD_PORT PORTA
