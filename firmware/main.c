@@ -1,8 +1,10 @@
 #include <avr/interrupt.h>
+#include <avr/eeprom.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/sleep.h>
 
+#include "lang.h"
 #include "dac.h"
 #include "flash.h"
 #include "audio.h"
@@ -119,7 +121,7 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
     uint8_t v_id = 0x0; // last played char
 
     // init morse
-    audio_morse_init(600, 6);
+    audio_morse_init(600, 6, 6);
 
     // prefill buffer
     while (get(chs) && !audio_buffer_full(2)) {
@@ -128,8 +130,13 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
         uint8_t v_bitmask = MORSE_MASK(v_idx);
         uint8_t v_length = MORSE_LEN(v_idx);
 
-        // add morse data to buffer and play it 
-        if(v_id) audio_morse_data(v_length, v_bitmask, 7);
+        // add morse data to buffer and play it
+        // also check the letter ahead to determine space length
+        if(v_id) {
+            audio_morse_data(v_length, v_bitmask,
+                             (get(chs+1) != ' ') ?
+                             LETTER_SPACE_LEN : WORD_SPACE_LEN);
+        }
 
         chs++;
     }
@@ -146,7 +153,11 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
         while(audio_buffer_full(2)); // wait till there is some space in the buffer
 
         // add morse data to buffer and play it 
-        audio_morse_data(v_length, v_bitmask, 7);
+        if(v_id) {
+            audio_morse_data(v_length, v_bitmask,
+                             (get(chs+1) != ' ') ?
+                             LETTER_SPACE_LEN : WORD_SPACE_LEN);
+        }
 
         chs++;
     }

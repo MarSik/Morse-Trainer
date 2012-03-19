@@ -44,9 +44,16 @@ void audio_wav_init(uint16_t samplerate);
 
 /* Initialize sampling/wavetable timer for morse output
    supported pitch 200 - 1000 Hz 
-   supported wpm 6 - 60 WPM
+   supported wpm 6 - 60 WPM (when wpm == effective_wpm)
+   
+   for Farnsworth timing the supported wpm/effective_wpm pairs have
+   to obey the above limitations and also the following formula:
+
+   1024 > 38*floor(586/effective_wpm) - 28*floor(586/wpm)
+
+   floor means to strip the partial part and keep only the whole part of the number
 */
-void audio_morse_init(uint16_t pitch, uint8_t wpm);
+void audio_morse_init(uint16_t pitch, uint8_t wpm, uint8_t effective_wpm);
 
 /* Prepare first sample/morse character to play, unmute and start needed timers */
 #define audio_play audio_start

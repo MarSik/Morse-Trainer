@@ -4,6 +4,7 @@
 #include "audio.h"
 #include "dac.h"
 #include "sine.h"
+#include "morse.h"
 
 typedef void (*int_routine)(void);
 
@@ -11,6 +12,8 @@ volatile int_routine next_sample; /* pointer to proper next sample method */
 
 uint8_t sample_clock;     /* configuration for sample clock prescaler */
 uint16_t dit_length;      /* number of sample clock cycles for one dit */
+uint16_t dit_length_farnsworth; /* number of sample clock cycles for one dit
+                                   when outputting last space in farnsworth mode */
 
 /* interrupt which sets output to morse space */
 void inline output_space(void);
@@ -32,6 +35,7 @@ volatile struct _buffer_pointers {
     uint8_t first:4; /* points at the first valid item */
     uint8_t empty:4; /* points at the first available space */
     uint8_t finished:1; /* there was nothing to play when next_sample was started */
+    uint8_t chardits:6; /* dits needed for this character */
 } buffer;
 
 
@@ -62,24 +66,31 @@ void sample_morse(void)
     struct { /* structure to save lengths of symbol and following space */
         uint8_t symbol:4;
         uint8_t space:4;
+        uint8_t last:1;
     } l;
 
     buffer_data[buffer.first]--;
 
-    if (buffer_data[bitmask_id] & 0x1) l.symbol = 3; /* DAH */
-    else l.symbol = 1; /* DIT */
+    if (buffer_data[bitmask_id] & 0x1) l.symbol = DAH_LEN; /* DAH */
+    else l.symbol = DIT_LEN; /* DIT */
 
     /* shift bitmask */
     buffer_data[bitmask_id] >>= 1;
 
     if ((buffer_data[buffer.first] & 0xf) == 0) {
+        /* last didah */
+        l.last = 1;
+
         /* last didah, send defined space */
         l.space = buffer_data[buffer.first] >> 4;
 
         /* shift buffer pointer to the next char */
         buffer.first = (buffer.first + 2) % AUDIO_BUFFER_SIZE;
     }
-    else l.space = 1; // one space after didah
+    else {
+        l.last = 0;
+        l.space = SPACE_LEN; // one space after didah
+    }
 
     /* setup sampling timer to output symbol and space */
     uint16_t len;
@@ -90,7 +101,32 @@ void sample_morse(void)
     OCR1A = len & 0xff;
     sei();
 
-    len = (l.space + l.symbol) * dit_length; /* length of symbol + space */
+    
+    /* count number of dits and compute space to have proper
+       effective farnsworth speed:
+       
+       character goes fast and space fills the time up
+       
+       ! supported only for 20 wpm letters (or slower)   !
+       ! and 12 wpm effective (or faster)               !
+       ! where the ending space fits into 10 bit number. !
+
+       worst case, eight dashes (8*3 + 7) and long space (7) = 38 dits
+       12 wpm = 48 ticks per dit, 20 wpm = 29 ticks per dit
+       
+       38 * 48 = 1824 (12 wpm length)
+       28 * 29 = 812  (already sent using 20 wpm, seven dashes and spaces)
+       the last part has to be 1012 ticks long (87 ticks for dash and 925 for space)
+    */
+    buffer.chardits += l.space + l.symbol; 
+
+    if (l.last) {
+        uint16_t efflen = buffer.chardits * dit_length_farnsworth;
+        len = efflen - (buffer.chardits - l.space) * dit_length;
+        buffer.chardits = 0;
+    }
+    else len = (l.symbol+l.space) * dit_length; /* length of symbol + space */
+
     cli();
     TC1H = len >> 8;
     OCR1C = len & 0xff;
@@ -166,7 +202,7 @@ void audio_wav_init(uint16_t samplerate)
   20wpm = 1000 dots per minute = 16.66 dots per second
 */
 
-void audio_morse_init(uint16_t pitch, uint8_t wpm)
+void audio_morse_init(uint16_t pitch, uint8_t wpm, uint8_t effective_wpm)
 {
     audio_buffer_clear();
     next_sample = &sample_morse;
@@ -209,6 +245,7 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm)
     */
     sample_clock = 0b1111; /* clock select (prescaler 16384) */
     dit_length = 586 / wpm; /* number of timer cycles for one dit at given speed */ 
+    dit_length_farnsworth = 586 / effective_wpm; /* number of timer cycles for one dit at given speed */ 
 
     cli();
     TC1H = 0;
@@ -269,6 +306,7 @@ void audio_buffer_clear()
 {
     buffer.first = 0;
     buffer.empty = 0;
+    buffer.chardits = 0;
 }
 
 /* Feed the buffer with wav data */

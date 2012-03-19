@@ -7,6 +7,12 @@
 #define di dit
 #define DAH 1
 
+#define DIT_LEN 1
+#define DAH_LEN 3
+#define SPACE_LEN 1
+#define LETTER_SPACE_LEN 3
+#define WORD_SPACE_LEN 7
+
 uint8_t morse_find(uint8_t id);
 
 /*
