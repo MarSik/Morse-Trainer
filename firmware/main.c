@@ -23,8 +23,20 @@ void setup(void)
     flash_init();
 }
 
+typedef uint8_t (*getchar_f)(uint8_t *);
 
-void play_characters(uint8_t *chs)
+uint8_t getchar_str(uint8_t *s)
+{
+    return *s;
+}
+
+uint8_t getchar_eep(uint8_t *s)
+{
+    return eeprom_read_byte(s);
+}
+
+
+void play_characters(uint8_t *chs, getchar_f get)
 {
     uint8_t a2,a1,a0;
     uint16_t l = 0;
@@ -36,10 +48,10 @@ void play_characters(uint8_t *chs)
     
     audio_wav_init(l);
     
-    while (*chs) {
+    while (get(chs)) {
         // get sound data for char
         flash_begin();
-        l = flash_info(*chs, &a2, &a1, &a0);
+        l = flash_info(get(chs), &a2, &a1, &a0);
         flash_end();
     
         flash_begin();
@@ -67,7 +79,7 @@ void play_characters(uint8_t *chs)
     // refill buffer when needed (read has already been prepared)
     // if there are data for current char, read them
     // if no, move to the next char
-    while(*chs) {
+    while(get(chs)) {
         while (l>0) {
             while (audio_buffer_full(1));
             audio_wav_data(flash_read());
@@ -76,12 +88,12 @@ void play_characters(uint8_t *chs)
 
         // move to the next character
         chs++;
-        if (*chs) {
+        if (get(chs)) {
             flash_end(); // end reading current char
 
             // get info about new char
             flash_begin();
-            l = flash_info(*chs, &a2, &a1, &a0);
+            l = flash_info(get(chs), &a2, &a1, &a0);
             flash_end();
             
             // inititalize read
@@ -99,10 +111,10 @@ void play_characters(uint8_t *chs)
 void play_character(uint8_t id)
 {
     uint8_t s[] = {id, 0x0};
-    play_characters(s);
+    play_characters(s, getchar_str);
 }
 
-uint8_t play_morse(uint8_t *chs)
+uint8_t play_morse(uint8_t *chs, getchar_f get)
 {
     uint8_t v_id = 0x0; // last played char
 
@@ -110,8 +122,8 @@ uint8_t play_morse(uint8_t *chs)
     audio_morse_init(600, 6);
 
     // prefill buffer
-    while (*chs && !audio_buffer_full(2)) {
-        uint8_t v_idx = morse_find(*chs);
+    while (get(chs) && !audio_buffer_full(2)) {
+        uint8_t v_idx = morse_find(get(chs));
         v_id = MORSE_ID(v_idx);
         uint8_t v_bitmask = MORSE_MASK(v_idx);
         uint8_t v_length = MORSE_LEN(v_idx);
@@ -125,8 +137,8 @@ uint8_t play_morse(uint8_t *chs)
     audio_play();
 
     // keep buffer filled
-    while (*chs) {
-        uint8_t v_idx = morse_find(*chs);
+    while (get(chs)) {
+        uint8_t v_idx = morse_find(get(chs));
         v_id = MORSE_ID(v_idx);
         uint8_t v_bitmask = MORSE_MASK(v_idx);
         uint8_t v_length = MORSE_LEN(v_idx);
@@ -151,20 +163,20 @@ int main(void)
     
     uint8_t c;
 
-    dac_volume(5);
+    dac_volume(2);
     c = 0;
 
     _delay_ms(2000);
 
     uint8_t welcome[] = "vitejte v morse testeru.";
-    play_characters(welcome);
+    play_characters(welcome, getchar_str);
 
     _delay_ms(1500);
 
     while(1) {
         if (MORSE_ID(c) == 0) c = 0;
         uint8_t s[] = {MORSE_ID(c), 0x0};
-        uint8_t v_id = play_morse(s);
+        uint8_t v_id = play_morse(s, getchar_str);
 
         c++;
 
