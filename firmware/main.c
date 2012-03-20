@@ -73,9 +73,6 @@ void play_characters(uint8_t *chs, getchar_f get)
         flash_begin();
         flash_read_init(a2, a1, a0);
     
-        // buffer is full, read is prepared, let it play
-        if (audio_buffer_full(1)) break;
-
         // prefill buffer
         while (!audio_buffer_full(1) && l>0) {
             audio_wav_data(flash_read());
@@ -101,12 +98,11 @@ void play_characters(uint8_t *chs, getchar_f get)
             audio_wav_data(flash_read());
             l--;
         }
+        flash_end();
 
         // move to the next character
         chs++;
         if (get(chs)) {
-            flash_end(); // end reading current char
-
             // get info about new char
             flash_begin();
             l = flash_info(get(chs), &a2, &a1, &a0);
@@ -116,11 +112,10 @@ void play_characters(uint8_t *chs, getchar_f get)
             flash_begin();
             flash_read_init(a2, a1, a0);
         }
-        else flash_end(); // no additional character
     }
     
     // wait till everything is played
-    while(!audio_buffer_empty() || !audio_buffer_finished());
+    while(!audio_buffer_finished());
     audio_stop();
 }
 
@@ -135,21 +130,22 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
     uint8_t v_id = 0x0; // last played char
 
     // init morse
-    audio_morse_init(600, 6, 6);
+    audio_morse_init(400, 12, 12);
 
     // prefill buffer
     while (get(chs) && !audio_buffer_full(2)) {
         uint8_t v_idx = morse_find(get(chs));
         v_id = MORSE_ID(v_idx);
-        uint8_t v_bitmask = MORSE_MASK(v_idx);
-        uint8_t v_length = MORSE_LEN(v_idx);
 
         // add morse data to buffer and play it
         // also check the letter ahead to determine space length
         if(v_id) {
+            uint8_t v_bitmask = MORSE_MASK(v_idx);
+            uint8_t v_length = MORSE_LEN(v_idx);
+
             audio_morse_data(v_length, v_bitmask,
-                             (get(chs+1) != ' ') ?
-                             LETTER_SPACE_LEN : WORD_SPACE_LEN);
+                             (get(chs+1) == ' ') ?
+                             WORD_SPACE_LEN : LETTER_SPACE_LEN);
         }
 
         chs++;
@@ -161,22 +157,23 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
     while (get(chs)) {
         uint8_t v_idx = morse_find(get(chs));
         v_id = MORSE_ID(v_idx);
-        uint8_t v_bitmask = MORSE_MASK(v_idx);
-        uint8_t v_length = MORSE_LEN(v_idx);
-
-        while(audio_buffer_full(2)); // wait till there is some space in the buffer
 
         // add morse data to buffer and play it 
         if(v_id) {
+            uint8_t v_bitmask = MORSE_MASK(v_idx);
+            uint8_t v_length = MORSE_LEN(v_idx);
+
+            while(audio_buffer_full(2)); // wait till there is some space in the buffer
+
             audio_morse_data(v_length, v_bitmask,
-                             (get(chs+1) != ' ') ?
-                             LETTER_SPACE_LEN : WORD_SPACE_LEN);
+                             (get(chs+1) == ' ') ?
+                             WORD_SPACE_LEN : LETTER_SPACE_LEN);
         }
 
         chs++;
     }
 
-    while(!audio_buffer_empty() || !audio_buffer_finished());
+    while(!audio_buffer_finished());
     audio_stop();
 
     return v_id;
@@ -188,18 +185,23 @@ int main(void)
     
     uint8_t c;
 
-    dac_volume(2);
+    dac_begin();
+    dac_volume(255);
+    dac_end();
+
     c = 0;
 
     _delay_ms(2000);
 
-    uint8_t welcome[] = "vitejte v morse testeru.";
+    uint8_t welcome[] = "vitejte v morse trenerovi.";
     play_characters(welcome, getchar_str);
+
+    uint8_t welcome_morse[] = "VITEJTE V MORSE TRENEROVI.";
+    play_morse(welcome_morse, getchar_str);
 
     _delay_ms(1500);
 
     while(1) {
-        if (MORSE_ID(c) == 0) c = 0;
         uint8_t s[] = {MORSE_ID(c), 0x0};
         uint8_t v_id = play_morse(s, getchar_str);
 
@@ -209,6 +211,7 @@ int main(void)
             play_character(v_id);
             _delay_ms(4000);
         }
+        else c = 0;
     }
 
     return 0;
