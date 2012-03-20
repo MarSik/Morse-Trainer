@@ -20,6 +20,20 @@ void setup(void)
     DDRB |= _BV(DDB1) | _BV(DDB2);
     PORTB &= ~_BV(PB1) & ~_BV(PB2);
 
+    /* setup KEY ports */
+    DDRA &= ~_BV(PA5) & ~_BV(PA4);
+    PORTA |= _BV(PA5) | _BV(PA4);
+
+    /* setup leds */
+    DDRA |= _BV(PA7) | _BV(PA6) | _BV(PA3);
+    PORTA |= _BV(PA7) /*| _BV(PA6)*/ | _BV(PA3);
+
+    /* setup ADC pin PA2 */
+
+    /* setup rotary */
+    DDRB &= 0b00001111;
+    PORTB |= 0b01110000;
+
     /* initialize subsystem interfaces */
     dac_init();
     flash_init();
