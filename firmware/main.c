@@ -9,6 +9,7 @@
 #include "flash.h"
 #include "audio.h"
 #include "morse.h"
+#include "leds.h"
 
 void setup(void)
 {
@@ -24,10 +25,6 @@ void setup(void)
     DDRA &= ~_BV(PA5) & ~_BV(PA4);
     PORTA |= _BV(PA5) | _BV(PA4);
 
-    /* setup leds */
-    DDRA |= _BV(PA7) | _BV(PA6) | _BV(PA3);
-    PORTA |= _BV(PA7) /*| _BV(PA6)*/ | _BV(PA3);
-
     /* setup ADC pin PA2 */
 
     /* setup rotary */
@@ -37,6 +34,7 @@ void setup(void)
     /* initialize subsystem interfaces */
     dac_init();
     flash_init();
+    leds_init();
 }
 
 typedef uint8_t (*getchar_f)(uint8_t *);
@@ -129,9 +127,6 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
 {
     uint8_t v_id = 0x0; // last played char
 
-    // init morse
-    audio_morse_init(400, 12, 12);
-
     // prefill buffer
     while (get(chs) && !audio_buffer_full(2)) {
         uint8_t v_idx = morse_find(get(chs));
@@ -186,7 +181,7 @@ int main(void)
     uint8_t c;
 
     dac_begin();
-    dac_volume(255);
+    dac_volume(128);
     dac_end();
 
     c = 0;
@@ -197,11 +192,16 @@ int main(void)
     play_characters(welcome, getchar_str);
 
     uint8_t welcome_morse[] = "VITEJTE V MORSE TRENEROVI.";
+
+    // init morse
+    audio_morse_init(400, 20, 20);
     play_morse(welcome_morse, getchar_str);
 
     _delay_ms(1500);
 
     while(1) {
+        audio_morse_init(400, 20, 12);
+
         uint8_t s[] = {MORSE_ID(c), 0x0};
         uint8_t v_id = play_morse(s, getchar_str);
 

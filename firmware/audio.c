@@ -5,6 +5,7 @@
 #include "dac.h"
 #include "sine.h"
 #include "morse.h"
+#include "leds.h"
 
 typedef void (*int_routine)(void);
 
@@ -60,6 +61,7 @@ void sample_morse(void)
 {
     if (buffer.first == buffer.empty) {
         buffer.finished = 1;
+        led_on(LED_RED);
         return;
     }
 
@@ -84,6 +86,10 @@ void sample_morse(void)
     if (l.last) {
         /* last didah, send defined space */
         l.space = buffer_data[buffer.first] >> 4;
+
+        /* zero data */
+        buffer_data[buffer.first] = 0;
+        buffer_data[bitmask_id] = 0;
 
         /* shift buffer pointer to the next char */
         buffer.first = (buffer.first + 2) % AUDIO_BUFFER_SIZE;
@@ -136,12 +142,14 @@ void sample_morse(void)
 
     /* start outputing sound */
     sine_start();
+    led_on(LED_GRN);
 }
 
 void inline output_space(void)
 {
     /* stop sound, output morse space */
     sine_stop();
+    led_off(LED_GRN);
 }
 
 /* Initialize sampling timer for audio */
@@ -283,6 +291,8 @@ void audio_stop()
 
     /*dac_mute();*/
     sine_stop();
+    led_off(LED_GRN);
+    led_off(LED_RED);
 }
 
 /* Is the buffer full? */
