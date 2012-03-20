@@ -1,6 +1,9 @@
 #ifndef __MT_dac_MS_20120309_
 #define __MT_dac_MS_20120309_
 
+#include "spi.h"
+#include "flash.h"
+
 /* ports */
 #define DAC_DDR DDRB
 #define DAC_PORT PORTB
@@ -10,11 +13,26 @@
 void dac_init(void);
 
 /* before anything can be done, dac has to be selected using dac_begin */
-void dac_begin(void);
-void dac_end(void);
+void inline dac_begin(void)
+{
+    flash_pause();
+    DAC_PORT &= ~_BV(DAC_CS);
+}
+
+
+void inline dac_end(void)
+{
+    DAC_PORT |= _BV(DAC_CS);
+    flash_unpause();
+}
+
 
 /* set audio volume 0 - 255 */
 void dac_volume(uint8_t vol);
+
+/* add substract one from actual volume till it reaches volume or 0 */ 
+void dac_fadein(void);
+void dac_fadeout(void);
 
 /* set dac output to value*Vcc/256 */
 void dac_output(uint8_t value);

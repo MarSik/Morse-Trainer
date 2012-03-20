@@ -1,6 +1,6 @@
 #include <avr/io.h>
-#include "flash.h"
 #include "dac.h"
+#include "spi.h"
 
 /* protocol:
 
@@ -16,8 +16,8 @@
 */
 
 /* MCP4XXX register addresses */
-#define DAC_AUDIO 0x00
-#define DAC_VOLUME 0x01
+#define DAC_AUDIO 0x01
+#define DAC_VOLUME 0x00
 #define DAC_TCON 0x04
 #define DAC_STATUS 0x05
 
@@ -30,67 +30,36 @@
 /* volume status */
 struct{
     uint8_t level:8;
-    uint8_t changed:1;
     uint8_t mute:1;
 } volume;
 
 
-void dac_begin()
+void dac_fadein()
 {
-    flash_pause();
-    DAC_PORT &= ~_BV(DAC_CS);
 }
 
-
-void dac_end()
+void dac_fadeout()
 {
-    DAC_PORT |= _BV(DAC_CS);
-    flash_unpause();
 }
 
 void dac_volume(uint8_t vol)
 {
     volume.level = vol;
-    volume.changed = 1;
+
+    /* output the command byte for volume value */
+    spi_transfer((DAC_VOLUME << 4) | (DAC_WRITE << 2));
+
+    /* output the data byte for volume value */
+    spi_transfer(volume.mute ? 0 : volume.level);
 }
 
 void dac_output(uint8_t value)
 {
-    uint8_t i;
-
     /* output the command byte for audio value */
-    USIDR = (DAC_AUDIO << 4) | (DAC_WRITE << 2);
-    for(i = 0; i < 8; i++) {
-        USICR |= _BV(USITC);
-        USICR |= _BV(USITC) | _BV(USICLK);
-    }
+    spi_transfer((DAC_AUDIO << 4) | (DAC_WRITE << 2));
 
     /* output the data byte for audio value */
-    USIDR = value;
-    for(i = 0; i < 8; i++) {
-        USICR |= _BV(USITC);
-        USICR |= _BV(USITC) | _BV(USICLK);
-    }
-
-
-    if (!volume.changed) return;
-
-    /* output the command byte for volume value */
-    USIDR = (DAC_VOLUME << 4) | (DAC_WRITE << 2);
-    for(i = 0; i < 8; i++) {
-        USICR |= _BV(USITC);
-        USICR |= _BV(USITC) | _BV(USICLK);
-    }
-
-
-    /* output the data byte for volume value */
-    USIDR = volume.mute ? 0 : volume.level;
-    for(i = 0; i < 8; i++) {
-        USICR |= _BV(USITC);
-        USICR |= _BV(USITC) | _BV(USICLK);
-    }
-
-    volume.changed = 0;
+    spi_transfer(value);
 }
 
 void dac_init()
@@ -99,9 +68,8 @@ void dac_init()
     DAC_PORT |= _BV(DAC_CS);
 
     /* full output, middle level */
-    dac_volume(255);
-    dac_unmute();
     dac_begin();
+    dac_volume(255);
     dac_output(128);
     dac_end();
 }
@@ -109,11 +77,11 @@ void dac_init()
 void dac_mute()
 {
     volume.mute = 1;
-    volume.changed = 1;
+    dac_volume(volume.level);
 }
 
 void dac_unmute()
 {
     volume.mute = 0;
-    volume.changed = 1;
+    dac_volume(volume.level);
 }
