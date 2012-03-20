@@ -31,10 +31,11 @@ uint8_t sine_table[] EEMEM = {
 
 #define sine_table_len 16
 #define sine_len (sine_table_len * 4)
+#define SINE_STEP 2
 
 uint8_t inline sine_table_get(uint8_t id)
 {
-    return eeprom_read_byte(sine_table + id);
+    return eeprom_read_byte(sine_table + id)/2;
 }
 
 /* get sine value transposed on 0 - 255 (center at 128),
@@ -64,7 +65,7 @@ ISR(TIMER0_COMPA_vect)
     dac_output(v);
     dac_end();
 
-    sine_id = (sine_id + 1) % sine_len;
+    sine_id = (sine_id + SINE_STEP) % sine_len;
 }
 
 void sine_init(uint16_t pitch)
@@ -77,8 +78,8 @@ void sine_init(uint16_t pitch)
 
     wavetable_clock = 0b001; /* prescaler 1 */
 
-    OCR0B = (F_CPU / (pitch * sine_len)) >> 8;
-    OCR0A = (F_CPU / (pitch * sine_len)) & 0xff; /* TOP value for the wavetable timer */
+    OCR0B = (F_CPU / (pitch * (sine_len / SINE_STEP))) >> 8;
+    OCR0A = (F_CPU / (pitch * (sine_len / SINE_STEP))) & 0xff; /* TOP value for the wavetable timer */
     
     cli();
     TCNT0H = 0;
@@ -107,6 +108,7 @@ void sine_start()
     uint8_t sine0 = sine(sine_id++);
 
     dac_begin();
+    dac_fadein();
     dac_output(sine0);
     dac_end();
 
