@@ -36,9 +36,6 @@
                    - moves buffer pointers to next byte
 */
 
-/* number of buffer bytes, must be even number */
-#define AUDIO_BUFFER_SIZE 16
-
 /* Initialize sampling timer for audio */
 void audio_wav_init(uint16_t samplerate);
 
