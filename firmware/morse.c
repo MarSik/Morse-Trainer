@@ -77,7 +77,7 @@ MORSE_TABLE(morse_table) EEMEM = {
     MORSE('.', di, DAH, di, DAH, di, DAH),
     MORSE('?', di, di, DAH, DAH, di, dit),
     MORSE(0xff, di, di, di, di, di, di, di, dit), //error
-    0
+    0, 0, 0 /* terminator */
 };
 
 
@@ -85,8 +85,9 @@ uint8_t morse_find(uint8_t id)
 {
     uint8_t idx = 0;
     
+    /* look through the table, end if the id matches or id == 0 (terminator) */
     while ((MORSE_ID(idx) != 0) && (MORSE_ID(idx) != id))
         idx++;
 
-    return idx;          
+    return idx;
 }

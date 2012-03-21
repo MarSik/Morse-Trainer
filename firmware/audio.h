@@ -52,6 +52,10 @@ void audio_wav_init(uint16_t samplerate);
 */
 void audio_morse_init(uint16_t pitch, uint8_t wpm, uint8_t effective_wpm);
 
+/*
+ */
+void audio_wait_init(void);
+
 /* Prepare first sample/morse character to play, unmute and start needed timers */
 #define audio_play audio_start
 void audio_start(void);

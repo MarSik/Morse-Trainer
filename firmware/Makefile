@@ -17,7 +17,7 @@ CEXTRA =
 CXXEXTRA = 
 
 # Source files for C compiler
-SRC = spi.c main.c dac.c audio.c flash.c sine.c morse.c leds.c
+SRC = spi.c main.c dac.c audio.c flash.c sine.c morse.c leds.c lesson.c
 
 # Source files for C++ compiler
 CXXSRC = 

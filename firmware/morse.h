@@ -17,9 +17,10 @@ uint8_t morse_find(uint8_t id);
 
 /*
   access macros to get morse bitmask, length and represented ascii char */
-#define MORSE_LEN(idx) (eeprom_read_byte(morse_table + (idx)*3) + 1)
-#define MORSE_ID(idx) eeprom_read_byte(morse_table + (idx)*3 + 1)
-#define MORSE_MASK(idx) eeprom_read_byte(morse_table + (idx)*3 + 2)
+#define MORSE_ENTRY_LEN 3
+#define MORSE_LEN(idx) (1 + eeprom_read_byte(morse_table + (idx)*MORSE_ENTRY_LEN))
+#define MORSE_ID(idx) eeprom_read_byte(morse_table + (idx)*MORSE_ENTRY_LEN + 1)
+#define MORSE_MASK(idx) eeprom_read_byte(morse_table + (idx)*MORSE_ENTRY_LEN + 2)
 
 #define MORSE_TABLE(name) uint8_t name[]
 extern MORSE_TABLE(morse_table) EEMEM;

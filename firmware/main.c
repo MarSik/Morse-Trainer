@@ -3,6 +3,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/sleep.h>
+#include <stdlib.h>
 
 #include "lang.h"
 #include "dac.h"
@@ -10,6 +11,9 @@
 #include "audio.h"
 #include "morse.h"
 #include "leds.h"
+#include "lesson.h"
+
+uint8_t teaching_chars EEMEM = 3;
 
 void setup(void)
 {
@@ -22,8 +26,9 @@ void setup(void)
     PORTB &= ~_BV(PB1) & ~_BV(PB2);
 
     /* setup KEY ports */
-    DDRA &= ~_BV(PA5) & ~_BV(PA4);
-    PORTA |= _BV(PA5) | _BV(PA4);
+    DDRA |= _BV(PA5); // middle of the jack connector
+    DDRA &= ~_BV(PA4); // tip of the jack connector
+    PORTA |= _BV(PA4) | _BV(PA5);
 
     /* setup ADC pin PA2 */
 
@@ -35,6 +40,9 @@ void setup(void)
     dac_init();
     flash_init();
     leds_init();
+
+    /* initialize random */
+    
 }
 
 typedef uint8_t (*getchar_f)(uint8_t *);
@@ -174,6 +182,8 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
     return v_id;
 }
 
+static uint8_t buffer[23];
+
 int main(void)
 {
     setup();
@@ -188,30 +198,40 @@ int main(void)
 
     _delay_ms(2000);
 
-    uint8_t welcome[] = "vitejte v morse trenerovi.";
-    play_characters(welcome, getchar_str);
-
-    uint8_t welcome_morse[] = "VITEJTE V MORSE TRENEROVI.";
+    play_characters(s_welcome, getchar_eep);
 
     // init morse
-    audio_morse_init(400, 20, 20);
-    play_morse(welcome_morse, getchar_str);
+    audio_morse_init(500, 20, 12);
+    play_morse(s_welcome_morse, getchar_eep);
 
     _delay_ms(1500);
 
     while(1) {
-        audio_morse_init(400, 20, 12);
+        uint8_t lesson = eeprom_read_byte(&teaching_chars);
 
-        uint8_t s[] = {MORSE_ID(c), 0x0};
-        uint8_t v_id = play_morse(s, getchar_str);
+        play_characters(s_lesson, getchar_eep);
 
-        c++;
+        buffer[0] = (lesson / 10) + '0';
+        buffer[1] = (lesson % 10) + '0';
+        buffer[2] = 0;
+        play_characters(buffer, getchar_str);
 
-        if (v_id) {
-            play_character(v_id);
-            _delay_ms(4000);
-        }
-        else c = 0;
+        lesson_new(lesson, 20, 3, 6, buffer);
+
+        audio_wait_init();
+        audio_play();
+        while(PINA & _BV(PA4));
+        audio_stop();
+
+        _delay_ms(1000);
+
+        audio_morse_init(500, 20, 12);
+        play_morse(buffer, getchar_str);
+        _delay_ms(2000);
+
+        play_characters(buffer, getchar_str);
+
+        _delay_ms(5000);
     }
 
     return 0;
