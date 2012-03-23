@@ -101,10 +101,6 @@ void sample_morse(void)
         /* last didah, send defined space */
         l.space = buffer_data[buffer_ctrl.first] >> 4;
 
-        /* zero data */
-        buffer_data[buffer_ctrl.first] = 0;
-        buffer_data[bitmask_id] = 0;
-
         /* shift buffer pointer to the next char */
         buffer_ctrl.first = (buffer_ctrl.first + 2) % AUDIO_BUFFER_SIZE;
     }

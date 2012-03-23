@@ -13,7 +13,27 @@
 #include "leds.h"
 #include "lesson.h"
 
-uint8_t teaching_chars EEMEM = 3;
+uint8_t teaching_lesson EEMEM = 0;
+uint8_t randomizer EEMEM = 0;
+
+/* use watchdog interrupt for software debounce */
+ISR(WDT_vect)
+{
+    /* disable WD */
+    WDTCR |= _BV(WDCE);
+    WDTCR &= ~_BV(WDE);
+
+    /* enable input interrupts */
+}
+
+void debounce(void)
+{
+    /* disable input interrupts */
+
+    /* reset WDT timer */
+    WDTCR |= _BV(WDIE); /* interrupt has to be enabled, we need it and it prevents reboot */
+    WDTCR |= _BV(WDE);
+}
 
 void setup(void)
 {
@@ -41,8 +61,10 @@ void setup(void)
     flash_init();
     leds_init();
 
-    /* initialize random */
-    
+    /* initialize random and change seed for next boot */
+    uint8_t srand = eeprom_read_byte(&randomizer);
+    srandom(srand);
+    eeprom_write_byte(&randomizer, srand+1);
 }
 
 typedef uint8_t (*getchar_f)(uint8_t *);
@@ -182,7 +204,7 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
     return v_id;
 }
 
-static uint8_t buffer[23];
+static uint8_t buffer[31];
 
 int main(void)
 {
@@ -201,22 +223,23 @@ int main(void)
     play_characters(s_welcome, getchar_eep);
 
     // init morse
-    audio_morse_init(500, 20, 12);
+    audio_morse_init(500, 20, 20);
     play_morse(s_welcome_morse, getchar_eep);
 
     _delay_ms(1500);
 
     while(1) {
-        uint8_t lesson = eeprom_read_byte(&teaching_chars);
+        uint8_t lesson = eeprom_read_byte(&teaching_lesson);
 
         play_characters(s_lesson, getchar_eep);
 
-        buffer[0] = (lesson / 10) + '0';
-        buffer[1] = (lesson % 10) + '0';
+        buffer[0] = ((lesson+1) / 10) + '0';
+        buffer[1] = ((lesson+1) % 10) + '0';
         buffer[2] = 0;
         play_characters(buffer, getchar_str);
 
-        lesson_new(lesson, 20, 3, 6, buffer);
+        uint8_t speed, effective_speed;
+        lesson_new(lesson, 30, &speed, &effective_speed, buffer);
 
         audio_wait_init();
         audio_play();
@@ -225,7 +248,7 @@ int main(void)
 
         _delay_ms(1000);
 
-        audio_morse_init(500, 20, 12);
+        audio_morse_init(500, speed, effective_speed);
         play_morse(buffer, getchar_str);
         _delay_ms(2000);
 
