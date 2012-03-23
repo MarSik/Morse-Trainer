@@ -13,7 +13,7 @@
 #define LETTER_SPACE_LEN 3
 #define WORD_SPACE_LEN 7
 
-uint8_t morse_find(uint8_t id);
+uint8_t morse_find(uint8_t id, uint8_t *chr);
 
 /*
   access macros to get morse bitmask, length and represented ascii char */

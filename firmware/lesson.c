@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include "lesson.h"
 #include "morse.h"
+#include "play.h"
 
-#define R(N) (rand() / (RAND_MAX / N))
+#define RAND(xN) (rand() / (RAND_MAX / (xN)))
 
 #define LESSON_TABLE(name) lesson_entry name[]
 #define LESSON_ENTRY_LEN 2
@@ -100,10 +101,10 @@ uint8_t lesson_new(uint8_t id, uint8_t length, uint8_t *speed, uint8_t *effectiv
 
     while (length>0 && length>group_min) {
         if (group_min == group_max) group = group_min;
-        else group = group_min + R(1 + group_max - group_min);
+        else group = group_min + RAND(1 + group_max - group_min);
 
         while (length>0 && group>0) {
-            buffer[idx++] = MORSE_ID(char_min + R(1 + char_max - char_min));
+            buffer[idx++] = MORSE_ID(char_min + RAND(1 + char_max - char_min));
             length--;
             group--;
         }

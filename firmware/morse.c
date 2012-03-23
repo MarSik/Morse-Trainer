@@ -81,13 +81,16 @@ MORSE_TABLE(morse_table) EEMEM = {
 };
 
 
-uint8_t morse_find(uint8_t id)
+uint8_t morse_find(uint8_t id, uint8_t *c)
 {
     uint8_t idx = 0;
-    
+
     /* look through the table, end if the id matches or id == 0 (terminator) */
-    while ((MORSE_ID(idx) != 0) && (MORSE_ID(idx) != id))
+    *c = MORSE_ID(idx);    
+    while ((*c != 0) && (*c != id)) {
         idx++;
+        *c = MORSE_ID(idx);
+    }
 
     return idx;
 }
