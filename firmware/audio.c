@@ -325,14 +325,14 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm, uint8_t effective_wpm)
     sine_init(pitch);
 }
 
-void audio_wait_init()
+void audio_wait_init(uint8_t speed)
 {
     next_sample = &sample_wait;
     sample_clock = 0b1111;
 
     cli();
     TC1H = 0;
-    OCR1C = 122; /* cycles per one sample */
+    OCR1C = 244 / speed; /* cycles per one sample */
     sei();
 
     /* enable only overflow interrupt */

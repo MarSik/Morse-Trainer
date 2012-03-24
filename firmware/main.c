@@ -14,6 +14,8 @@
 #include "lesson.h"
 #include "play.h"
 
+#define SINGLE_MODE 1
+
 uint8_t teaching_lesson EEMEM = 0;
 uint8_t randomizer EEMEM = 0;
 
@@ -25,15 +27,17 @@ ISR(WDT_vect)
     WDTCR &= ~_BV(WDE);
 
     /* enable input interrupts */
+    GIMSK |= _BV(PCIE1);
 }
 
 void debounce(void)
 {
     /* disable input interrupts */
+    GIMSK &= ~_BV(PCIE1);
 
-    /* reset WDT timer */
-    WDTCR |= _BV(WDIE); /* interrupt has to be enabled, we need it and it prevents reboot */
-    WDTCR |= _BV(WDE);
+    /* reset WDT timer to 64ms */
+    WDTCR |= _BV(WDCE) | _BV(WDE);
+    WDTCR |= _BV(WDP1) | _BV(WDE) | _BV(WDIE); /* interrupt has to be enabled, we need it and it prevents reboot */
 }
 
 void setup(void)
@@ -68,8 +72,29 @@ void setup(void)
     eeprom_write_byte(&randomizer, srand+1);
 }
 
+volatile uint8_t correct;
 
-static uint8_t buffer[21];
+/* pin change int for key */
+ISR(PCINT_vect){
+    if (!(PINA & _BV(PA4))) {
+            debounce();
+            correct++;
+    }
+}
+
+void verify_start(void)
+{
+    correct = 0;
+    GIMSK |= _BV(PCIE1);
+    PCMSK0 |= _BV(PCINT4);
+}
+
+void verify_end(void)
+{
+    PCMSK0 &= ~ _BV(PCINT4);
+}
+
+static uint8_t buffer[51];
 
 int main(void)
 {
@@ -103,21 +128,87 @@ int main(void)
         buffer[2] = 0;
         play_characters(buffer, getchar_str);
 
-        uint8_t speed, effective_speed;
-        lesson_new(lesson, 20, &speed, &effective_speed, buffer);
+        uint8_t lesson_len, speed, effective_speed;
+        lesson_len = lesson_new(lesson, 50, &speed, &effective_speed, buffer);
 
-        audio_wait_init();
+        audio_wait_init(2);
         audio_play();
         while(PINA & _BV(PA4));
         audio_stop();
 
         _delay_ms(1000);
 
-        audio_morse_init(500, speed, effective_speed);
-        play_morse(buffer, getchar_str);
-        _delay_ms(2000);
+        if (SINGLE_MODE) {
+            /* single char teaching mode */
+            uint8_t *ch = buffer;
+            c = 0;
 
+            while (*ch) {
+                uint8_t tmp[] = {*ch, 0};
+                
+                if (MORSE_ID(*ch)) {
+                    play_characters(tmp, getchar_str);
+                    _delay_ms(500);
+                    
+                    audio_morse_init(500, speed, speed);
+                    play_morse(tmp, getchar_str);
+                    
+                    verify_start();
+                    led_on(LED_RED);
+                    audio_wait_init(6);
+                    audio_play();
+                    _delay_ms(750);
+                    led_off(LED_RED);
+                    audio_stop();
+                    verify_end();
+                    
+                    if (correct) c++;
+                }
+                else lesson_len--;
+                
+                ch++;
+            }
+            correct = c;
+        }
+        /* end single char teaching mode */        
+
+
+        /* long test */
+        else {
+            audio_morse_init(500, speed, effective_speed);
+            play_morse(buffer, getchar_str);
+            _delay_ms(1500);
+
+            led_on(LED_RED);
+            verify_start();
+            _delay_ms(500);
+            play_characters(buffer, getchar_str);
+            _delay_ms(1000);
+            led_off(LED_RED);
+            verify_end();
+        }    
+        /* end long test */
+         
+        play_characters(s_correct, getchar_eep);
+
+        buffer[0] = '0' + (correct / 10);
+        buffer[1] = '0' + (correct % 10);
+        buffer[2] = 0;
         play_characters(buffer, getchar_str);
+
+        play_characters(s_outof, getchar_eep);
+
+        buffer[0] = '0' + (lesson_len / 10);
+        buffer[1] = '0' + (lesson_len % 10);
+        buffer[2] = 0;
+        play_characters(buffer, getchar_str);
+
+        /* if the success rate is higher than 95%, move to the next lesson */
+        if (correct >= (lesson_len - lesson_len/20)) {
+            lesson++;
+            eeprom_write_byte(&teaching_lesson, lesson);
+            play_characters(s_congrats, getchar_eep);
+        }
 
         _delay_ms(5000);
     }
