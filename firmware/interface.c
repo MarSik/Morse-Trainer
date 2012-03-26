@@ -2,9 +2,13 @@
 #include <util/delay.h>
 #include <avr/io.h>
 #include "interface.h"
+#include "dac.h"
 
 uint8_t interface_mask;
 volatile uint8_t interface_presses;
+
+#define ROTARY_LOOKUP_PREV 0b0100000110000010
+#define ROTARY_LOOKUP_NEXT 0b0010100000010100
 
 static void debounce(void);
 
@@ -17,7 +21,7 @@ void interface_init(void)
 
     /* setup ADC pin PA2 */
 
-    /* setup rotary */
+    /* setup rotary button + A and B sensors */
     DDRB &= 0b00001111;
     PORTB |= 0b01110000;
 
@@ -30,16 +34,35 @@ void interface_init(void)
 /* pin change int for key */
 ISR(PCINT_vect){
     if (!(PINA & _BV(PA4))) {
-            debounce();
             interface_buttons |= _BV(KEY_A);
             if(interface_mask & _BV(KEY_A)) ++interface_presses;
+            debounce();
     }
 
     if (!(PINA & _BV(PA5))) {
-            debounce();
             interface_buttons |= _BV(KEY_B);
             if(interface_mask & _BV(KEY_B)) ++interface_presses;
+            debounce();
     }
+
+    /* get rotary vector[oldB oldA B A]*/
+    uint8_t r = ((ROTARY_PIN >> ROTARY_SHIFT) & 0b11) | (interface_buttons & 0b1100);
+    
+    if (ROTARY_LOOKUP_NEXT & _BV(r)) {
+        if (volume_flags & _BV(HOLD_VOLUME)) interface_buttons |= _BV(ROTARY_NEXT);
+        else dac_louder();
+        debounce();
+    }
+
+    else if (ROTARY_LOOKUP_PREV & _BV(r)) {
+        if (volume_flags & _BV(HOLD_VOLUME)) interface_buttons |= _BV(ROTARY_PREV);
+        else dac_quieter();
+        debounce();
+    }
+
+    /* save old rotary */
+    interface_buttons &= ~0b1100;
+    interface_buttons |= (r << 2) & 0b1100;
 }
 
 void interface_begin(void)

@@ -9,6 +9,14 @@
 #define DAC_PORT PORTB
 #define DAC_CS 3
 
+//!!! SHARED with audio interface, use only 4 low bits
+//static uint8_t volume_flags;
+#define volume_flags GPIOR2
+
+#define VOLUME_MUTE 0
+#define VOLUME_CHANGED 1
+#define HOLD_VOLUME 3 /* using rotary will not modify volume */
+
 /* initializes dac during bootup */
 void dac_init(void);
 
@@ -29,6 +37,10 @@ void inline dac_end(void)
 
 /* set audio volume 0 - 255 */
 void dac_volume(uint8_t vol);
+
+/* add substract one from actual volume till it reaches MAX or 0 */ 
+void dac_louder(void);
+void dac_quieter(void);
 
 /* add substract one from actual volume till it reaches volume or 0 */ 
 void dac_fadein(void);

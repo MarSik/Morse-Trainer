@@ -29,9 +29,24 @@
 
 /* volume status */
 static uint8_t volume_level;
-static uint8_t volume_flags;
 
-#define VOLUME_MUTE 0
+
+void dac_louder(void)
+{
+    if(volume_level < 255) {
+        ++volume_level;
+        volume_flags |= _BV(VOLUME_CHANGED);
+    }
+}
+
+void dac_quieter(void)
+{
+    if(volume_level) {
+        --volume_level;
+        volume_flags |= _BV(VOLUME_CHANGED);
+    }
+}
+
 
 void dac_fadein()
 {
@@ -44,12 +59,7 @@ void dac_fadeout()
 void dac_volume(uint8_t vol)
 {
     volume_level = vol;
-
-    /* output the command byte for volume value */
-    spi_transfer((DAC_VOLUME << 4) | (DAC_WRITE << 2));
-
-    /* output the data byte for volume value */
-    spi_transfer((volume_flags & VOLUME_MUTE) ? 0 : volume_level);
+    volume_flags |= _BV(VOLUME_CHANGED);
 }
 
 void dac_output(uint8_t value)
@@ -59,6 +69,16 @@ void dac_output(uint8_t value)
 
     /* output the data byte for audio value */
     spi_transfer(value);
+
+    if (volume_flags & _BV(VOLUME_CHANGED)) {
+        /* output the command byte for volume value */
+        spi_transfer((DAC_VOLUME << 4) | (DAC_WRITE << 2));
+
+        /* output the data byte for volume value */
+        spi_transfer((volume_flags & VOLUME_MUTE) ? 0 : volume_level);
+
+        volume_flags &= ~_BV(VOLUME_CHANGED);
+    }
 }
 
 void dac_init()
@@ -67,20 +87,20 @@ void dac_init()
     DAC_PORT |= _BV(DAC_CS);
 
     /* full output, middle level */
-    dac_begin();
     dac_volume(255);
+
+    dac_begin();
     dac_output(128);
     dac_end();
 }
 
 void dac_mute()
 {
-    volume_flags |= _BV(VOLUME_MUTE);
-    dac_volume(volume_level);
+    volume_flags |= _BV(VOLUME_MUTE) | _BV(VOLUME_CHANGED);
 }
 
 void dac_unmute()
 {
     volume_flags &= ~_BV(VOLUME_MUTE);
-    dac_volume(volume_level);
+    volume_flags |= _BV(VOLUME_CHANGED);
 }

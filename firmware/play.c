@@ -43,7 +43,7 @@ void play_characters(const uint8_t *chs, getchar_f get)
         flash_read_init(a2, a1, a0);
     
         // prefill buffer
-        while (!audio_buffer_full(1) && l>0) {
+        while (!audio_buffer_full() && l>0) {
             audio_wav_data(flash_read());
             l--;
         }
@@ -63,7 +63,7 @@ void play_characters(const uint8_t *chs, getchar_f get)
     // if no, move to the next char
     while(get(chs)) {
         while (l>0) {
-            while (audio_buffer_full(1));
+            while (audio_buffer_full());
             audio_wav_data(flash_read());
             l--;
         }
@@ -101,7 +101,7 @@ uint8_t play_morse(const uint8_t *chs, getchar_f get)
 
     // prefill buffer
     v_id = get(chs);
-    while (v_id && !audio_buffer_full(2)) {
+    while (v_id && !audio_buffer_full()) {
         disable_sine_int();
         uint8_t v_idx = morse_find(v_id, &v_id);
         enable_sine_int();
@@ -140,7 +140,7 @@ uint8_t play_morse(const uint8_t *chs, getchar_f get)
             uint8_t v_bitmask = MORSE_MASK(v_idx);
             uint8_t v_length = MORSE_LEN(v_idx);
             enable_sine_int();
-            while(audio_buffer_full(2)); // wait till there is some space in the buffer
+            while(audio_buffer_full()); // wait till there is some space in the buffer
 
             audio_morse_data(v_length, v_bitmask,
                              (next == ' ') ?

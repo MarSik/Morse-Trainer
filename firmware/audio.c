@@ -40,11 +40,6 @@ static volatile uint8_t buffer_data[AUDIO_BUFFER_SIZE];
 #define buffer_first GPIOR1
 volatile uint8_t buffer_empty;
 
-//volatile uint8_t buffer_state;
-#define buffer_state GPIOR2
-
-#define BUFFER_FINISHED 0
-#define BUFFER_READ_LAST 1
 
 volatile uint8_t buffer_chardits;
 
@@ -360,7 +355,7 @@ void audio_stop()
 }
 
 /* Is the buffer full? */
-uint8_t audio_buffer_full(uint8_t needed)
+uint8_t audio_buffer_full(void)
 {
     return ((!(buffer_state & _BV(BUFFER_READ_LAST))) &&
             (buffer_empty == buffer_first));
@@ -391,7 +386,7 @@ void audio_buffer_clear()
 /* Feed the buffer with wav data */
 uint8_t audio_wav_data(uint8_t sample)
 {
-    if (audio_buffer_full(1)) return 0;
+    if (audio_buffer_full()) return 0;
 
 
     buffer_data[buffer_empty] = sample;
@@ -407,7 +402,7 @@ uint8_t audio_wav_data(uint8_t sample)
 /* Add morse symbol and following space to buffer */
 uint8_t audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space)
 {
-    if (audio_buffer_full(2)) return 0;
+    if (audio_buffer_full()) return 0;
 
 
     uint8_t lenidx = buffer_empty;

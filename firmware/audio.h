@@ -36,6 +36,13 @@
                    - moves buffer pointers to next byte
 */
 
+//volatile uint8_t buffer_state;
+//!!! SHARED with dac interface, use only 4 high bits
+#define buffer_state GPIOR2
+
+#define BUFFER_FINISHED 6
+#define BUFFER_READ_LAST 7
+
 /* Initialize sampling timer for audio */
 void audio_wav_init(uint16_t samplerate);
 
@@ -64,7 +71,7 @@ void audio_start(void);
 void audio_stop(void);
 
 /* Is the buffer full? */
-uint8_t audio_buffer_full(uint8_t needed);
+uint8_t audio_buffer_full(void);
 
 /* Is the buffer empty */
 uint8_t audio_buffer_empty(void);

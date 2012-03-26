@@ -160,6 +160,8 @@ int main(void)
                     uint8_t xid;
                     uint8_t tmp[] = {*ch, 0};
                 
+                    // we do not need to disable morse ints, because
+                    // sinewave is not playing yet
                     morse_find(*ch, &xid);
                     if (*ch == xid) {
                         play_characters(tmp, getchar_str);
@@ -204,7 +206,7 @@ int main(void)
             }
             /* end long test */
 
-            /* play resultng score */
+            /* play resulting score */
             play_characters(s_correct, getchar_eep);
 
             buffer[0] = tensinascii(correct);
