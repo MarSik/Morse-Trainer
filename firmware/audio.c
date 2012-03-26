@@ -18,7 +18,7 @@ static uint16_t dit_length_farnsworth; /* number of sample clock cycles for one 
                                    when outputting last space in farnsworth mode */
 
 /* interrupt which sets output to morse space */
-void inline output_space(void);
+static void output_space(void);
 
 ISR(TIMER1_COMPA_vect)
 {
@@ -35,107 +35,103 @@ ISR(TIMER1_OVF_vect)
 /* number of buffer bytes, must be even number */
 #define AUDIO_BUFFER_SIZE 16
 static volatile uint8_t buffer_data[AUDIO_BUFFER_SIZE];
-static volatile struct _buffer_pointers {
-    uint8_t first:4; /* points at the first valid item */
-    uint8_t empty:4; /* points at the first available space */
-    uint8_t rw:1;    /* last op was read = 0, write = 1 */
-} buffer_ctrl;
 
-static volatile struct _morse_state {
-    uint8_t finished:1; /* there was nothing to play when next_sample was started */
-    uint8_t chardits:6; /* dits needed for this character */
-} play_state;
+volatile uint8_t buffer_first;
+volatile uint8_t buffer_empty;
+volatile uint8_t buffer_state;
 
+#define BUFFER_FINISHED 0
+#define BUFFER_READ_LAST 1
 
-void inline enable_morse_int(void)
+volatile uint8_t buffer_chardits;
+
+static void inline enable_morse_int(void)
 {
     TIMSK |= _BV(OCIE1A) | _BV(TOIE1);
 }
 
-void inline disable_morse_int(void)
+static void inline disable_morse_int(void)
 {
     TIMSK &= ~_BV(OCIE1A) & ~_BV(TOIE1);
 }
 
-void inline enable_wav_int(void)
+static void inline enable_wav_int(void)
 {
     TIMSK |= _BV(TOIE1);
 }
 
-void inline disable_wav_int(void)
+static void inline disable_wav_int(void)
 {
     TIMSK &= ~_BV(OCIE1A) & ~_BV(TOIE1);
 }
 
 
-void sample_wait(void)
+static void sample_wait(void)
 {
     led_toggle(PA5);
 }
 
 /* outputs next wav sample and moves buffer pointer */
-void sample_wav(void)
+static void sample_wav(void)
 {
     if (audio_buffer_empty()) {
-        play_state.finished = 1;
+        buffer_state |= _BV(BUFFER_FINISHED);
         return;
     }
 
     dac_begin();
-    dac_output(buffer_data[buffer_ctrl.first]);
+    dac_output(buffer_data[buffer_first]);
     dac_end();
-    buffer_ctrl.first = (buffer_ctrl.first + 1) % AUDIO_BUFFER_SIZE;
-    buffer_ctrl.rw = 0;
+    buffer_first = (buffer_first + 1) % AUDIO_BUFFER_SIZE;
+    buffer_state |= _BV(BUFFER_READ_LAST);
 }
 
 /* configure next dit/dah and space to sampling timer
    and when at the end of character move buffer pointer to next char */
-void sample_morse(void)
+static void sample_morse(void)
 {
-    static struct { /* structure to save lengths of symbol and following space */
-        uint8_t symbol:4;
-        uint8_t space:4;
-        uint8_t last:1;
-    } l;
+    uint8_t symbol_len;
+    uint8_t space_len;
+    uint8_t last;
 
     if (audio_buffer_empty()) {
-        play_state.finished = 1;
+        buffer_state |= _BV(BUFFER_FINISHED);
         return;
     }
 
-    uint8_t len_id = buffer_ctrl.first;
+    uint8_t len_id = buffer_first;
     uint8_t bitmask_id = (len_id + 1) % AUDIO_BUFFER_SIZE;
 
-    if (buffer_data[bitmask_id] & 0x1) l.symbol = DAH_LEN; /* DAH */
-    else l.symbol = DIT_LEN; /* DIT */
+    if (buffer_data[bitmask_id] & 0x1) symbol_len = DAH_LEN; /* DAH */
+    else symbol_len = DIT_LEN; /* DIT */
 
     /* shift bitmask and decrement counter */
     buffer_data[len_id]--;
 
     /* last didah */
-    l.last = ((buffer_data[len_id] & 0x0f) == 0);
+    last = ((buffer_data[len_id] & 0x0f) == 0);
 
-    if (l.last) {
+    if (last) {
         /* last didah, send defined space */
-        l.space = buffer_data[len_id] >> 4;
+        space_len = buffer_data[len_id] >> 4;
 
         buffer_data[len_id] = 0;
         buffer_data[bitmask_id] = 0;
 
         /* shift buffer pointer to the next char */
-        buffer_ctrl.first = (buffer_ctrl.first + 2) % AUDIO_BUFFER_SIZE;
-        buffer_ctrl.rw = 0;
+        buffer_first = (buffer_first + 2) % AUDIO_BUFFER_SIZE;
+        buffer_state |= _BV(BUFFER_READ_LAST);
     }
     else {
         buffer_data[bitmask_id] >>= 1;
-        l.space = SPACE_LEN; // one space after didah
+        space_len = SPACE_LEN; // one space after didah
     }
 
     //if ((buffer_data[len_id] & 0xf) > 8) led_on(LED_RED);
 
     /* setup sampling timer to output symbol and space */
     uint16_t len;
-    len = l.symbol * dit_length; /* length of symbol */
+    len = symbol_len * dit_length; /* length of symbol */
 
     // save global interrupt enable value
     uint8_t sreg_i = SREG & _BV(SREG_I);
@@ -167,16 +163,16 @@ void sample_morse(void)
        28 * 29 = 812  (already sent using 20 wpm, seven dashes and spaces)
        the last part has to be 1012 ticks long (87 ticks for dash and 925 for space)
     */
-    play_state.chardits += l.space + l.symbol; 
+    buffer_chardits += space_len + symbol_len; 
 
-    if (l.last && (dit_length_farnsworth != dit_length)) {
-        uint16_t efflen = play_state.chardits * dit_length_farnsworth;
+    if (last && (dit_length_farnsworth != dit_length)) {
+        uint16_t efflen = buffer_chardits * dit_length_farnsworth;
 
         /* add the prolonged space at the end of current symbol */
-        len = len + efflen - (play_state.chardits - l.space) * dit_length;
-        play_state.chardits = 0;
+        len = len + efflen - (buffer_chardits - space_len) * dit_length;
+        buffer_chardits = 0;
     }
-    else len = (l.symbol+l.space) * dit_length; /* length of symbol + space */
+    else len = (symbol_len+space_len) * dit_length; /* length of symbol + space */
 
     // save global interrupt enable value
     sreg_i = SREG & _BV(SREG_I);
@@ -197,7 +193,7 @@ void sample_morse(void)
     led_on(LED_GRN);
 }
 
-void inline output_space(void)
+static void inline output_space(void)
 {
     /* stop sound, output morse space */
     sine_stop();
@@ -234,7 +230,7 @@ void audio_wav_init(uint16_t samplerate)
 
     while (cyclespersample > 1023) {
         cyclespersample >>= 1;
-        sample_clock++; //increase prescaler divider (+1 multiplies prescaler by 2)
+        ++sample_clock; //increase prescaler divider (+1 multiplies prescaler by 2)
     }
 
     cli();
@@ -345,7 +341,7 @@ void audio_start()
 {
     next_sample();
 
-    play_state.finished = 0;
+    buffer_state &= ~_BV(BUFFER_FINISHED);
     TCCR1B = sample_clock;
 }
 
@@ -363,29 +359,30 @@ void audio_stop()
 /* Is the buffer full? */
 uint8_t audio_buffer_full(uint8_t needed)
 {
-    return (buffer_ctrl.rw && (buffer_ctrl.empty == buffer_ctrl.first));
+    return ((!(buffer_state & _BV(BUFFER_READ_LAST))) &&
+            (buffer_empty == buffer_first));
 }
 
 uint8_t audio_buffer_empty(void)
 {
-    return (!buffer_ctrl.rw && (buffer_ctrl.first == buffer_ctrl.empty));
+    return ((buffer_state & _BV(BUFFER_READ_LAST)) &&
+            (buffer_first == buffer_empty));
 }
 
 uint8_t audio_buffer_finished(void)
 {
-    return play_state.finished;
+    return (buffer_state & _BV(BUFFER_FINISHED));
 }
 
 /* Empty the buffer */
 void audio_buffer_clear()
 {
-    buffer_ctrl.first = 0;
-    buffer_ctrl.empty = 0;
-    buffer_ctrl.rw = 0;
+    buffer_first = 0;
+    buffer_empty = 0;
+    buffer_state = _BV(BUFFER_READ_LAST);
+    buffer_chardits = 0;
 
-    play_state.chardits = 0;
-
-    for(int i = 0; i<AUDIO_BUFFER_SIZE; i++) buffer_data[i]=0;
+    for(int i = 0; i<AUDIO_BUFFER_SIZE; ++i) buffer_data[i]=0;
 }
 
 /* Feed the buffer with wav data */
@@ -393,13 +390,12 @@ uint8_t audio_wav_data(uint8_t sample)
 {
     if (audio_buffer_full(1)) return 0;
 
-    play_state.finished = 0;
 
-    buffer_data[buffer_ctrl.empty] = sample;
+    buffer_data[buffer_empty] = sample;
 
     disable_wav_int();
-    buffer_ctrl.empty = (buffer_ctrl.empty + 1) % AUDIO_BUFFER_SIZE;
-    buffer_ctrl.rw = 1;
+    buffer_empty = (buffer_empty + 1) % AUDIO_BUFFER_SIZE;
+    buffer_state = 0; /* not finished and last op wasn't read */
     enable_wav_int();
 
     return 1;
@@ -410,9 +406,8 @@ uint8_t audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space)
 {
     if (audio_buffer_full(2)) return 0;
 
-    play_state.finished = 0;
 
-    uint8_t lenidx = buffer_ctrl.empty;
+    uint8_t lenidx = buffer_empty;
     uint8_t maskidx = (lenidx + 1) % AUDIO_BUFFER_SIZE;
 
     if (buffer_data[lenidx] || buffer_data[maskidx]) led_on(LED_RED);
@@ -422,8 +417,8 @@ uint8_t audio_morse_data(uint8_t len, uint8_t bitmask, uint8_t space)
 
     /* guard the crit section */
     disable_morse_int();
-    buffer_ctrl.empty = (buffer_ctrl.empty + 2) % AUDIO_BUFFER_SIZE;
-    buffer_ctrl.rw = 1;
+    buffer_empty = (buffer_empty + 2) % AUDIO_BUFFER_SIZE;
+    buffer_state = 0; /* not finished and last op wasn't read */
     enable_morse_int();
 
     return 2;

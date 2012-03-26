@@ -28,11 +28,10 @@
 #define DAC_DEC 0b10
 
 /* volume status */
-struct{
-    uint8_t level:8;
-    uint8_t mute:1;
-} volume;
+static uint8_t volume_level;
+static uint8_t volume_flags;
 
+#define VOLUME_MUTE 0
 
 void dac_fadein()
 {
@@ -44,13 +43,13 @@ void dac_fadeout()
 
 void dac_volume(uint8_t vol)
 {
-    volume.level = vol;
+    volume_level = vol;
 
     /* output the command byte for volume value */
     spi_transfer((DAC_VOLUME << 4) | (DAC_WRITE << 2));
 
     /* output the data byte for volume value */
-    spi_transfer(volume.mute ? 0 : volume.level);
+    spi_transfer((volume_flags & VOLUME_MUTE) ? 0 : volume_level);
 }
 
 void dac_output(uint8_t value)
@@ -76,12 +75,12 @@ void dac_init()
 
 void dac_mute()
 {
-    volume.mute = 1;
-    dac_volume(volume.level);
+    volume_flags |= _BV(VOLUME_MUTE);
+    dac_volume(volume_level);
 }
 
 void dac_unmute()
 {
-    volume.mute = 0;
-    dac_volume(volume.level);
+    volume_flags &= ~_BV(VOLUME_MUTE);
+    dac_volume(volume_level);
 }

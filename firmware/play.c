@@ -6,22 +6,22 @@
 #include "play.h"
 #include "sine.h"
 
-uint8_t getchar_str(uint8_t *s)
+uint8_t getchar_str(const uint8_t *s)
 {
     return *s;
 }
 
-uint8_t getchar_eep(uint8_t *s)
+uint8_t getchar_eep(const uint8_t *s)
 {
     return eeprom_read_byte(s);
 }
 
-uint8_t getchar_pgm(uint8_t *s)
+uint8_t getchar_pgm(const uint8_t *s)
 {
     return pgm_read_byte(s);
 }
 
-void play_characters(uint8_t *chs, getchar_f get)
+void play_characters(const uint8_t *chs, getchar_f get)
 {
     uint8_t a2,a1,a0;
     uint16_t l = 0;
@@ -50,7 +50,7 @@ void play_characters(uint8_t *chs, getchar_f get)
 
         if (l==0) { // whole character was read already, set up next character
             flash_end();
-            chs++;
+            ++chs;
         }
         else break; // buffer is full, but the current character has data left, let it play
     }
@@ -70,7 +70,7 @@ void play_characters(uint8_t *chs, getchar_f get)
         flash_end();
 
         // move to the next character
-        chs++;
+        ++chs;
         if (get(chs)) {
             // get info about new char
             flash_begin();
@@ -94,7 +94,7 @@ void play_character(uint8_t id)
     play_characters(s, getchar_str);
 }
 
-uint8_t play_morse(uint8_t *chs, getchar_f get)
+uint8_t play_morse(const uint8_t *chs, getchar_f get)
 {
     uint8_t v_id = 0x0; // last played char
     uint8_t next = 0x0;
@@ -105,7 +105,7 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
         disable_sine_int();
         uint8_t v_idx = morse_find(v_id, &v_id);
         enable_sine_int();
-        chs++;
+        ++chs;
         next = get(chs);
 
         // add morse data to buffer and play it
@@ -131,7 +131,7 @@ uint8_t play_morse(uint8_t *chs, getchar_f get)
         uint8_t v_idx = morse_find(v_id, &v_id);
         enable_sine_int();
 
-        chs++;
+        ++chs;
         next = get(chs);
 
         // add morse data to buffer and play it
