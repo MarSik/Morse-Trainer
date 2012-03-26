@@ -1,6 +1,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/io.h>
+#include <avr/sleep.h>
 #include "interface.h"
 #include "dac.h"
 
@@ -41,17 +42,26 @@ void interface_init(void)
 
 /* pin change int for key */
 ISR(PCINT_vect){
+    uint8_t db = 0;
+
+    if (!(PINB & _BV(PB6))) {
+            interface_buttons |= _BV(BUTTON);
+            if(interface_mask & _BV(BUTTON)) ++interface_presses;
+            db = 1;
+    }
+    else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(BUTTON);
+
     if (!(PINA & _BV(PA4))) {
             interface_buttons |= _BV(KEY_A);
             if(interface_mask & _BV(KEY_A)) ++interface_presses;
-            debounce();
+            db = 1;
     }
     else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(KEY_A);
 
     if (!(PINA & _BV(PA5))) {
             interface_buttons |= _BV(KEY_B);
             if(interface_mask & _BV(KEY_B)) ++interface_presses;
-            debounce();
+            db = 1;
     }
     else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(KEY_B);
 
@@ -61,14 +71,17 @@ ISR(PCINT_vect){
     if (ROTARY_LOOKUP_NEXT & _BV(r)) {
         if (volume_flags & _BV(HOLD_VOLUME)) interface_buttons |= _BV(ROTARY_NEXT);
         else dac_louder();
-        debounce();
+        db = 1;
     }
 
     else if (ROTARY_LOOKUP_PREV & _BV(r)) {
         if (volume_flags & _BV(HOLD_VOLUME)) interface_buttons |= _BV(ROTARY_PREV);
         else dac_quieter();
-        debounce();
+        db = 1;
     }
+
+    /* debounce */
+    if(db) debounce();
 
     /* save old rotary */
     interface_buttons &= ~0b1100;
@@ -82,11 +95,13 @@ void interface_begin(uint8_t mode, uint8_t mask)
     interface_presses = 0;
     GIMSK |= _BV(PCIE1);
     PCMSK0 |= _BV(PCINT4);
+    PCMSK1 |= _BV(PCINT14) | _BV(PCINT13) | _BV(PCINT12);
 }
 
 void interface_end(void)
 {
-    PCMSK0 &= ~ _BV(PCINT4);
+    PCMSK0 &= ~_BV(PCINT4);
+    PCMSK1 &= ~(_BV(PCINT14) | _BV(PCINT13) | _BV(PCINT12));
 }
 
 
@@ -105,7 +120,7 @@ ISR(WDT_vect)
 uint16_t timeout(uint16_t ms, uint8_t button_mask)
 {
     while (ms>100) {
-        if (!(interface_buttons & button_mask)) return ms;
+        if (interface_buttons & button_mask) return ms;
         _delay_ms(100);
         ms -= 100;
     }

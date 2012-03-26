@@ -1,10 +1,12 @@
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
+#include <avr/sleep.h>
 #include "audio.h"
 #include "flash.h"
 #include "morse.h"
 #include "play.h"
 #include "sine.h"
+#include "interface.h"
 
 uint8_t getchar_str(const uint8_t *s)
 {
@@ -61,9 +63,10 @@ void play_characters(const uint8_t *chs, getchar_f get)
     // refill buffer when needed (read has already been prepared)
     // if there are data for current char, read them
     // if no, move to the next char
+    set_sleep_mode(SLEEP_MODE_IDLE);
     while(get(chs)) {
         while (l>0) {
-            while (audio_buffer_full());
+            while (audio_buffer_full()) sleep_mode();
             audio_wav_data(flash_read());
             l--;
         }
@@ -84,7 +87,7 @@ void play_characters(const uint8_t *chs, getchar_f get)
     }
     
     // wait till everything is played
-    while(!audio_buffer_finished());
+    while(!audio_buffer_finished()) sleep_mode();
     audio_stop();
 }
 
@@ -126,6 +129,7 @@ uint8_t play_morse(const uint8_t *chs, getchar_f get)
     audio_play();
 
     // keep buffer filled
+    set_sleep_mode(SLEEP_MODE_IDLE);
     while (v_id) {
         disable_sine_int();
         uint8_t v_idx = morse_find(v_id, &v_id);
@@ -140,7 +144,7 @@ uint8_t play_morse(const uint8_t *chs, getchar_f get)
             uint8_t v_bitmask = MORSE_MASK(v_idx);
             uint8_t v_length = MORSE_LEN(v_idx);
             enable_sine_int();
-            while(audio_buffer_full()); // wait till there is some space in the buffer
+            while(audio_buffer_full()) sleep_mode(); // wait till there is some space in the buffer
 
             audio_morse_data(v_length, v_bitmask,
                              (next == ' ') ?
@@ -150,7 +154,7 @@ uint8_t play_morse(const uint8_t *chs, getchar_f get)
         v_id = next;
     }
 
-    while(!audio_buffer_finished());
+    while(!audio_buffer_finished()) sleep_mode();
     audio_stop();
 
     return v_id;

@@ -25,6 +25,9 @@ static enum{
 
 void setup(void)
 {
+    /* disable AC */
+    ACSRA |= _BV(ACD);
+
     /* setup USI - SPI, PORTB */
     USICR = _BV(USIWM0);
     USIPP &= ~_BV(USIPOS);
@@ -59,7 +62,7 @@ uint8_t menu_item(const uint8_t *entry)
     interface_buttons &= ~_BV(KEY_A);
     audio_wait_init(6);
     audio_play();
-    timeout(1500, KEY_A);
+    timeout(1500, _BV(KEY_A));
     led_off(LED_RED);
     audio_stop();
     if (interface_buttons & _BV(KEY_A)) {
@@ -119,6 +122,11 @@ int main(void)
                 break;
             }
             
+            if (menu_item(s_keying)) {
+                teaching_mode = MODE_KEYING;
+                break;
+            }
+
             if (menu_item(s_next)) {
                 lesson_change(1);
                 break;
@@ -149,7 +157,10 @@ int main(void)
 
             audio_wait_init(2);
             audio_play();
-            while(PINA & _BV(PA4));
+            set_sleep_mode(SLEEP_MODE_IDLE);
+            interface_begin(LATCHING_MODE, 0);
+            while(!(interface_buttons & _BV(KEY_A))) sleep_mode();
+            interface_end();
             audio_stop();
 
             _delay_ms(1000);
@@ -165,7 +176,7 @@ int main(void)
                     // we do not need to disable morse ints, because
                     // sinewave is not playing yet
                     morse_find(*ch, &xid);
-                    if (*ch == xid) {
+                    if ((*ch) == xid) {
                         play_characters(tmp, getchar_str);
                         _delay_ms(500);
                     
@@ -176,7 +187,7 @@ int main(void)
                         led_on(LED_RED);
                         audio_wait_init(6);
                         audio_play();
-                        timeout(1500, KEY_A);
+                        timeout(1500, _BV(KEY_A));
                         led_off(LED_RED);
                         audio_stop();
                         interface_end();
@@ -210,6 +221,12 @@ int main(void)
 
             /* keying test */
             else if (teaching_mode == MODE_KEYING) {
+                audio_morse_init(500, speed, 0);
+                interface_begin(NONLATCHING_MODE, _BV(KEY_A));
+                audio_play();
+                while(interface_buttons & _BV(BUTTON)) sleep_mode();
+                interface_end();
+                audio_stop();
             }
             /* end keying test */ 
 
@@ -229,7 +246,7 @@ int main(void)
             play_characters(buffer, getchar_str);
 
             /* if the success rate is higher than 95%, move to the next lesson */
-            if (correct >= (lesson_len - lesson_len/20)) {
+            if ((lesson_len > 0) && correct >= (lesson_len - lesson_len/20)) {
                 lesson_change(1);
                 play_characters(s_congrats, getchar_eep);
             }

@@ -6,9 +6,11 @@
 
 uint8_t teaching_lesson EEMEM = 0;
 
-#define LESSON(xstartchar, xendchar, xgroupmin, xgroupmax, xspeed, xeffective_speed) {.e1 = {.startchar = xstartchar, .endchar = xendchar, .groupmax = xgroupmax - 10}},\
-        {.e2 = {.groupmin = xgroupmin, .effective_speed = xeffective_speed - 10, .speed = xspeed - xeffective_speed}}
-
+#define LESSON(xstartchar, xendchar, xgroupmin, xgroupmax, xspeed, xeffective_speed) \
+    (xstartchar << 2) | ((xendchar & 0b110000) >> 4), \
+    ((xendchar & 0b1111) << 4) | xgroupmax, \
+    xgroupmin, \
+    ((xeffective_speed - 10) << 4) | (xspeed - xeffective_speed)
 
 
 LESSON_TABLE(lessons) EEMEM = {

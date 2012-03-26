@@ -7,6 +7,7 @@
 #include "sine.h"
 #include "morse.h"
 #include "leds.h"
+#include "interface.h"
 
 typedef void (*int_routine)(void);
 
@@ -191,6 +192,61 @@ static void sample_morse(void)
     led_on(LED_GRN);
 }
 
+/*
+  iambic keyer to practice sending
+*/
+static void sample_keyer(void)
+{
+    uint8_t symbol_len = 0;
+
+    // both
+    if ((interface_buttons & (_BV(KEY_A) | _BV(KEY_B))) == (_BV(KEY_A) | _BV(KEY_B))) {
+        if (buffer_state & _BV(DIT_LAST)) {
+            symbol_len = DAH_LEN;
+            buffer_state &= ~_BV(DIT_LAST);
+        }
+        else {
+            symbol_len = DIT_LEN;
+            buffer_state |= _BV(DIT_LAST);
+        }
+    }
+    // left
+    else if (interface_buttons & _BV(KEY_A)) {
+        symbol_len = DIT_LEN;
+        buffer_state |= _BV(DIT_LAST);
+    }
+    // right
+    else if (interface_buttons & _BV(KEY_B)) {
+        symbol_len = DAH_LEN;
+        buffer_state &= ~_BV(DIT_LAST);
+    }
+
+    if (symbol_len) {
+        uint16_t len = symbol_len * dit_length;
+
+        // symbol len
+        TC1H = len >> 8;
+        OCR1A = len & 0xff;
+
+        // symbol + space len
+        len += dit_length;
+        TC1H = len >> 8;
+        OCR1C = len & 0xff;
+
+        sine_start();
+        led_on(LED_GRN);
+    }
+    else {
+        uint16_t len = dit_length;
+        TC1H = 0;
+        OCR1A = 255;
+
+        // symbol + space len
+        TC1H = len >> 8;
+        OCR1C = len & 0xff;
+    }
+}
+
 static void inline output_space(void)
 {
     /* stop sound, output morse space */
@@ -259,7 +315,8 @@ void audio_wav_init(uint16_t samplerate)
 void audio_morse_init(uint16_t pitch, uint8_t wpm, uint8_t effective_wpm)
 {
     audio_buffer_clear();
-    next_sample = &sample_morse;
+    if (effective_wpm) next_sample = &sample_morse;
+    else next_sample = &sample_keyer;
 
     /*
        sampling timer
