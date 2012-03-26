@@ -33,7 +33,7 @@ uint8_t sine_table[] EEMEM = {
 #define sine_len (sine_table_len * 4)
 #define SINE_STEP 2
 
-uint8_t inline sine_table_get(uint8_t id)
+uint8_t sine_table_get(uint8_t id)
 {
     return eeprom_read_byte(sine_table + id)/2;
 }

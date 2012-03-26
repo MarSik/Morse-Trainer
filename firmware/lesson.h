@@ -91,5 +91,7 @@ uint8_t inline lesson_new(uint8_t id, uint8_t length, uint8_t *speed, uint8_t *e
     return idx;
 }
 
+uint8_t lesson_id(void);
+uint8_t lesson_change(signed char offset);
 
 #endif

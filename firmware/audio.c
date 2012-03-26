@@ -36,9 +36,12 @@ ISR(TIMER1_OVF_vect)
 #define AUDIO_BUFFER_SIZE 16
 static volatile uint8_t buffer_data[AUDIO_BUFFER_SIZE];
 
-volatile uint8_t buffer_first;
+//volatile uint8_t buffer_first;
+#define buffer_first GPIOR1
 volatile uint8_t buffer_empty;
-volatile uint8_t buffer_state;
+
+//volatile uint8_t buffer_state;
+#define buffer_state GPIOR2
 
 #define BUFFER_FINISHED 0
 #define BUFFER_READ_LAST 1

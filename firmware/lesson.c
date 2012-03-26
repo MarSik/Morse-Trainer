@@ -1,9 +1,10 @@
 #include <stdlib.h>
+#include <avr/eeprom.h>
 #include "lesson.h"
 #include "morse.h"
 #include "play.h"
 
-
+uint8_t teaching_lesson EEMEM = 0;
 
 #define LESSON(xstartchar, xendchar, xgroupmin, xgroupmax, xspeed, xeffective_speed) {.e1 = {.startchar = xstartchar, .endchar = xendchar, .groupmax = xgroupmax - 10}},\
         {.e2 = {.groupmin = xgroupmin, .effective_speed = xeffective_speed - 10, .speed = xspeed - xeffective_speed}}
@@ -36,3 +37,15 @@ LESSON_TABLE(lessons) EEMEM = {
     LESSON(0, 42, 5, 5, 20, 20)
 };
 
+uint8_t lesson_id(void)
+{
+    return eeprom_read_byte(&teaching_lesson);
+}
+
+uint8_t lesson_change(signed char offset)
+{
+    uint8_t lesson = lesson_id();
+    lesson += offset;
+    if(lesson) eeprom_write_byte(&teaching_lesson, lesson);
+    return lesson;
+}
