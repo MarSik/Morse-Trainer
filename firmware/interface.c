@@ -27,7 +27,7 @@ void interface_init(void)
 
     /* initialize interface struct */
     interface_presses = 0;
-    interface_buttons = 0;
+    interface_buttons = 0; /* no buttons pressed, latching mode */
     interface_mask = 0;
 }
 
@@ -38,12 +38,14 @@ ISR(PCINT_vect){
             if(interface_mask & _BV(KEY_A)) ++interface_presses;
             debounce();
     }
+    else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(KEY_A);
 
     if (!(PINA & _BV(PA5))) {
             interface_buttons |= _BV(KEY_B);
             if(interface_mask & _BV(KEY_B)) ++interface_presses;
             debounce();
     }
+    else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(KEY_B);
 
     /* get rotary vector[oldB oldA B A]*/
     uint8_t r = ((ROTARY_PIN >> ROTARY_SHIFT) & 0b11) | (interface_buttons & 0b1100);
@@ -65,10 +67,10 @@ ISR(PCINT_vect){
     interface_buttons |= (r << 2) & 0b1100;
 }
 
-void interface_begin(void)
+void interface_begin(uint8_t mode, uint8_t mask)
 {
-    interface_buttons = 0;
-    interface_mask = _BV(KEY_A);
+    interface_buttons = mode;
+    interface_mask = mask;
     interface_presses = 0;
     GIMSK |= _BV(PCIE1);
     PCMSK0 |= _BV(PCINT4);
@@ -77,7 +79,6 @@ void interface_begin(void)
 void interface_end(void)
 {
     PCMSK0 &= ~ _BV(PCINT4);
-    interface_mask = 0;
 }
 
 
@@ -102,12 +103,13 @@ static void debounce(void)
     WDTCR = _BV(WDP1) | _BV(WDE) | _BV(WDIE); /* interrupt has to be enabled, we need it and it prevents reboot */
 }
 
-uint16_t timeout(uint16_t ms)
+uint16_t timeout(uint16_t ms, uint8_t button_mask)
 {
-    while ((ms>100) && (!(interface_buttons & _BV(KEY_A)))) {
+    while (ms>100) {
+        if (!(interface_buttons & button_mask)) return ms;
         _delay_ms(100);
         ms -= 100;
     }
 
-    return ms;
+    return 0;
 }

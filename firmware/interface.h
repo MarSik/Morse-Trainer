@@ -20,11 +20,14 @@ extern volatile uint8_t interface_presses;
 #define BUTTON 4
 #define ROTARY_NEXT 5
 #define ROTARY_PREV 6
-#define PRESS_BREAKS 7 /* pressing button from mask breaks play methods */
+#define NONLATCHING 7
+
+#define NONLATCHING_MODE _BV(NONLATCHING)
+#define LATCHING_MODE 0
 
 void interface_init(void);
-void interface_begin(void);
+void interface_begin(uint8_t mode, uint8_t mask);
 void interface_end(void);
-uint16_t timeout(uint16_t ms);
+uint16_t timeout(uint16_t ms, uint8_t button_mask);
 
 #endif

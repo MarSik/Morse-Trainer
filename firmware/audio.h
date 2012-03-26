@@ -40,6 +40,7 @@
 //!!! SHARED with dac interface, use only 4 high bits
 #define buffer_state GPIOR2
 
+#define PRESS_BREAKS 5 /* pressing button from mask breaks play methods */
 #define BUFFER_FINISHED 6
 #define BUFFER_READ_LAST 7
 

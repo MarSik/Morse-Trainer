@@ -54,10 +54,9 @@ uint8_t menu_item(const uint8_t *entry)
     
     led_on(LED_RED);
     interface_buttons &= ~_BV(KEY_A);
-    interface_buttons |= _BV(PRESS_BREAKS);
     audio_wait_init(6);
     audio_play();
-    timeout(1500);
+    timeout(1500, KEY_A);
     led_off(LED_RED);
     audio_stop();
     if (interface_buttons & _BV(KEY_A)) {
@@ -105,7 +104,7 @@ int main(void)
     
     while(1) {
         /* menu code */
-        interface_begin();
+        interface_begin(LATCHING_MODE, 0);
         while(1) {
             if (menu_item(s_single)) {
                 teaching_mode = _BV(MODE_SINGLE);
@@ -170,11 +169,11 @@ int main(void)
                         audio_morse_init(500, speed, speed);
                         play_morse(tmp, getchar_str);
                     
-                        interface_begin();
+                        interface_begin(LATCHING_MODE, 0);
                         led_on(LED_RED);
                         audio_wait_init(6);
                         audio_play();
-                        timeout(1500);
+                        timeout(1500, KEY_A);
                         led_off(LED_RED);
                         audio_stop();
                         interface_end();
@@ -196,7 +195,7 @@ int main(void)
                 _delay_ms(1500);
 
                 led_on(LED_RED);
-                interface_begin();
+                interface_begin(LATCHING_MODE, _BV(KEY_A));
                 _delay_ms(500);
                 play_characters(buffer, getchar_str);
                 _delay_ms(1000);
