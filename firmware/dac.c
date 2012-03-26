@@ -28,24 +28,7 @@
 #define DAC_DEC 0b10
 
 /* volume status */
-static uint8_t volume_level;
-
-
-void dac_louder(void)
-{
-    if(volume_level < 255) {
-        ++volume_level;
-        volume_flags |= _BV(VOLUME_CHANGED);
-    }
-}
-
-void dac_quieter(void)
-{
-    if(volume_level) {
-        --volume_level;
-        volume_flags |= _BV(VOLUME_CHANGED);
-    }
-}
+uint8_t volume_level;
 
 
 void dac_fadein()

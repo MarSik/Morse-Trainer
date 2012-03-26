@@ -39,8 +39,25 @@ void inline dac_end(void)
 void dac_volume(uint8_t vol);
 
 /* add substract one from actual volume till it reaches MAX or 0 */ 
-void dac_louder(void);
-void dac_quieter(void);
+extern uint8_t volume_level;
+
+
+void inline dac_louder(void)
+{
+    if(volume_level < 255) {
+        ++volume_level;
+        volume_flags |= _BV(VOLUME_CHANGED);
+    }
+}
+
+void inline dac_quieter(void)
+{
+    if(volume_level) {
+        --volume_level;
+        volume_flags |= _BV(VOLUME_CHANGED);
+    }
+}
+
 
 /* add substract one from actual volume till it reaches volume or 0 */ 
 void dac_fadein(void);

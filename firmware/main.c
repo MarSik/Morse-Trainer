@@ -15,10 +15,13 @@
 #include "play.h"
 #include "interface.h"
 
-uint8_t randomizer EEMEM = 0;
-uint8_t teaching_mode;
+static uint8_t randomizer EEMEM = 0;
 
-#define MODE_SINGLE 0
+static enum{
+    MODE_GROUPS,
+    MODE_SINGLE,
+    MODE_KEYING
+} teaching_mode;
 
 void setup(void)
 {
@@ -42,7 +45,7 @@ void setup(void)
     eeprom_write_byte(&randomizer, srand+1);
 
     /* initialize learning mode */
-    teaching_mode = _BV(MODE_SINGLE);
+    teaching_mode = MODE_SINGLE;
 }
 
 static uint8_t buffer[51];
@@ -107,12 +110,12 @@ int main(void)
         interface_begin(LATCHING_MODE, 0);
         while(1) {
             if (menu_item(s_single)) {
-                teaching_mode = _BV(MODE_SINGLE);
+                teaching_mode = MODE_SINGLE;
                 break;
             }
 
             if (menu_item(s_groups)) {
-                teaching_mode = 0;
+                teaching_mode = MODE_GROUPS;
                 break;
             }
             
@@ -151,7 +154,7 @@ int main(void)
 
             _delay_ms(1000);
 
-            if (teaching_mode & _BV(MODE_SINGLE)) {
+            if (teaching_mode == MODE_SINGLE) {
                 /* single char teaching mode */
                 uint8_t *ch = buffer;
 
@@ -189,7 +192,7 @@ int main(void)
 
 
             /* long test */
-            else {
+            else if (teaching_mode == MODE_GROUPS) {
                 audio_morse_init(500, speed, effective_speed);
                 play_morse(buffer, getchar_str);
                 _delay_ms(1500);
@@ -204,6 +207,11 @@ int main(void)
                 correct = interface_presses;
             }
             /* end long test */
+
+            /* keying test */
+            else if (teaching_mode == MODE_KEYING) {
+            }
+            /* end keying test */ 
 
             /* play resulting score */
             play_characters(s_correct, getchar_eep);

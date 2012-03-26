@@ -10,7 +10,15 @@ volatile uint8_t interface_presses;
 #define ROTARY_LOOKUP_PREV 0b0100000110000010
 #define ROTARY_LOOKUP_NEXT 0b0010100000010100
 
-static void debounce(void);
+inline void debounce(void)
+{
+    /* disable input interrupts */
+    GIMSK &= ~_BV(PCIE1);
+
+    /* reset WDT timer to 64ms */
+    WDTCR = _BV(WDCE) | _BV(WDE);
+    WDTCR = _BV(WDP1) | _BV(WDE) | _BV(WDIE); /* interrupt has to be enabled, we need it and it prevents reboot */
+}
 
 void interface_init(void)
 {
@@ -93,15 +101,6 @@ ISR(WDT_vect)
     GIMSK |= _BV(PCIE1);
 }
 
-static void debounce(void)
-{
-    /* disable input interrupts */
-    GIMSK &= ~_BV(PCIE1);
-
-    /* reset WDT timer to 64ms */
-    WDTCR = _BV(WDCE) | _BV(WDE);
-    WDTCR = _BV(WDP1) | _BV(WDE) | _BV(WDIE); /* interrupt has to be enabled, we need it and it prevents reboot */
-}
 
 uint16_t timeout(uint16_t ms, uint8_t button_mask)
 {
