@@ -4,6 +4,7 @@
 #include <avr/sleep.h>
 #include "interface.h"
 #include "dac.h"
+#include "leds.h"
 
 uint8_t interface_mask;
 volatile uint8_t interface_presses;
@@ -21,12 +22,24 @@ inline void debounce(void)
     WDTCR = _BV(WDP1) | _BV(WDE) | _BV(WDIE); /* interrupt has to be enabled, we need it and it prevents reboot */
 }
 
-void interface_init(void)
+void interface_iambic_key(void)
 {
-    /* setup KEY ports */
+    DDRA |= _BV(PA5); // middle of the jack connector
+    DDRA |= _BV(PA4); // tip of the jack connector
+    PORTA |= _BV(PA4) | _BV(PA5);
+}
+
+void interface_standard_key(void)
+{
     DDRA |= _BV(PA5); // middle of the jack connector
     DDRA &= ~_BV(PA4); // tip of the jack connector
     PORTA |= _BV(PA4) | _BV(PA5);
+}
+
+void interface_init(void)
+{
+    /* setup KEY ports */
+    interface_standard_key();
 
     /* setup ADC pin PA2 */
 
@@ -45,29 +58,29 @@ ISR(PCINT_vect){
     uint8_t db = 0;
 
     if (!(PINB & _BV(PB6))) {
-            interface_buttons |= _BV(BUTTON);
-            if(interface_mask & _BV(BUTTON)) ++interface_presses;
-            db = 1;
+        interface_buttons |= _BV(BUTTON);
+        if(interface_mask & _BV(BUTTON)) ++interface_presses;
+        db = 1;
     }
     else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(BUTTON);
 
     if (!(PINA & _BV(PA4))) {
-            interface_buttons |= _BV(KEY_A);
-            if(interface_mask & _BV(KEY_A)) ++interface_presses;
-            db = 1;
+        interface_buttons |= _BV(KEY_A);
+        if(interface_mask & _BV(KEY_A)) ++interface_presses;
+        db = 1;
     }
     else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(KEY_A);
 
     if (!(PINA & _BV(PA5))) {
-            interface_buttons |= _BV(KEY_B);
-            if(interface_mask & _BV(KEY_B)) ++interface_presses;
-            db = 1;
+        interface_buttons |= _BV(KEY_B);
+        if(interface_mask & _BV(KEY_B)) ++interface_presses;
+        db = 1;
     }
     else if(interface_buttons & _BV(NONLATCHING)) interface_buttons &= ~_BV(KEY_B);
 
     /* get rotary vector[oldB oldA B A]*/
     uint8_t r = ((ROTARY_PIN >> ROTARY_SHIFT) & 0b11) | (interface_buttons & 0b1100);
-    
+
     if (ROTARY_LOOKUP_NEXT & _BV(r)) {
         if (volume_flags & _BV(HOLD_VOLUME)) interface_buttons |= _BV(ROTARY_NEXT);
         else dac_louder();
@@ -85,7 +98,7 @@ ISR(PCINT_vect){
 
     /* save old rotary */
     interface_buttons &= ~0b1100;
-    interface_buttons |= (r << 2) & 0b1100;
+    interface_buttons |= ((r & 0b11) << 2);
 }
 
 void interface_begin(uint8_t mode, uint8_t mask)

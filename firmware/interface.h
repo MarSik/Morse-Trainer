@@ -30,4 +30,7 @@ void interface_begin(uint8_t mode, uint8_t mask);
 void interface_end(void);
 uint16_t timeout(uint16_t ms, uint8_t button_mask);
 
+void interface_iambic_key(void);
+void interface_standard_key(void);
+
 #endif

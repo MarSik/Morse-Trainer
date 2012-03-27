@@ -47,7 +47,10 @@ uint8_t lesson_id(void)
 uint8_t lesson_change(signed char offset)
 {
     uint8_t lesson = lesson_id();
-    lesson += offset;
-    if(lesson) eeprom_write_byte(&teaching_lesson, lesson);
+    if ((lesson && (offset < 0)) ||
+        ((offset > 0) && (lesson < (LESSON_COUNT(lessons) - 1)))) {
+        lesson += offset;
+        eeprom_write_byte(&teaching_lesson, lesson);
+    }
     return lesson;
 }

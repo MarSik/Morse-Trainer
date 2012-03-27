@@ -44,16 +44,16 @@ extern uint8_t volume_level;
 
 void inline dac_louder(void)
 {
-    if(volume_level < 255) {
-        ++volume_level;
+    if(volume_level < 245) {
+        volume_level += 10;
         volume_flags |= _BV(VOLUME_CHANGED);
     }
 }
 
 void inline dac_quieter(void)
 {
-    if(volume_level) {
-        --volume_level;
+    if(volume_level > 10) {
+        volume_level -= 10;
         volume_flags |= _BV(VOLUME_CHANGED);
     }
 }

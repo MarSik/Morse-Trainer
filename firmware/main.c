@@ -59,13 +59,13 @@ uint8_t menu_item(const uint8_t *entry)
     play_characters(entry, getchar_eep);
     
     led_on(LED_RED);
-    interface_buttons &= ~_BV(KEY_A);
+    interface_buttons &= ~_BV(BUTTON);
     audio_wait_init(6);
     audio_play();
-    timeout(1500, _BV(KEY_A));
+    timeout(1500, _BV(BUTTON));
     led_off(LED_RED);
     audio_stop();
-    if (interface_buttons & _BV(KEY_A)) {
+    if (interface_buttons & _BV(BUTTON)) {
         return 1;
     }
     _delay_ms(500);
@@ -89,18 +89,10 @@ static uint8_t onesinascii(uint8_t n)
 int main(void)
 {
     setup();
-    
-    uint8_t c;
-
-    dac_begin();
     dac_volume(128);
-    dac_end();
-
-    c = 0;
 
     _delay_ms(2000);
-    
-    play_characters(s_welcome, getchar_eep);
+     play_characters(s_welcome, getchar_eep);
 
     // init morse
     audio_morse_init(500, 20, 20);
@@ -111,6 +103,7 @@ int main(void)
     while(1) {
         /* menu code */
         interface_begin(LATCHING_MODE, 0);
+
         while(1) {
             if (menu_item(s_single)) {
                 teaching_mode = MODE_SINGLE;
@@ -129,16 +122,17 @@ int main(void)
 
             if (menu_item(s_next)) {
                 lesson_change(1);
-                break;
+                continue;
             }
 
             if (menu_item(s_previous)) {
                 lesson_change(-1);
-                break;
+                continue;
             }
 
         }
-        interface_end();
+
+        interface_begin(LATCHING_MODE, 0);
 
         /* teaching code */
         while(!(interface_buttons & _BV(BUTTON))) {
@@ -159,9 +153,12 @@ int main(void)
             audio_play();
             set_sleep_mode(SLEEP_MODE_IDLE);
             interface_begin(LATCHING_MODE, 0);
-            while(!(interface_buttons & _BV(KEY_A))) sleep_mode();
-            interface_end();
+            while(
+                  (!(interface_buttons & _BV(KEY_A))) &&
+                  (!(interface_buttons & _BV(BUTTON)))) sleep_mode();
             audio_stop();
+
+            if (interface_buttons & _BV(BUTTON)) break;
 
             _delay_ms(1000);
 
@@ -183,14 +180,14 @@ int main(void)
                         audio_morse_init(500, speed, speed);
                         play_morse(tmp, getchar_str);
                     
-                        interface_begin(LATCHING_MODE, 0);
+			interface_begin(LATCHING_MODE, 0);
                         led_on(LED_RED);
                         audio_wait_init(6);
                         audio_play();
                         timeout(1500, _BV(KEY_A));
                         led_off(LED_RED);
                         audio_stop();
-                        interface_end();
+                        _delay_ms(500);
                     
                         if (interface_buttons & _BV(KEY_A)) ++correct;
                     }
@@ -214,19 +211,19 @@ int main(void)
                 play_characters(buffer, getchar_str);
                 _delay_ms(1000);
                 led_off(LED_RED);
-                interface_end();
                 correct = interface_presses;
             }
             /* end long test */
 
             /* keying test */
             else if (teaching_mode == MODE_KEYING) {
+                interface_iambic_key();
                 audio_morse_init(500, speed, 0);
                 interface_begin(NONLATCHING_MODE, _BV(KEY_A));
                 audio_play();
-                while(interface_buttons & _BV(BUTTON)) sleep_mode();
-                interface_end();
+                while(!(interface_buttons & _BV(BUTTON))) sleep_mode();
                 audio_stop();
+                interface_standard_key();
             }
             /* end keying test */ 
 
