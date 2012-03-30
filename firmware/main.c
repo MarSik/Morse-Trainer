@@ -218,7 +218,7 @@ int main(void)
             /* keying test */
             else if (teaching_mode == MODE_KEYING) {
                 interface_iambic_key();
-                audio_morse_init(500, speed, 0);
+                audio_morse_init(500, effective_speed, 0);
                 interface_begin(NONLATCHING_MODE, _BV(KEY_A));
                 audio_play();
                 while(!(interface_buttons & _BV(BUTTON))) sleep_mode();
