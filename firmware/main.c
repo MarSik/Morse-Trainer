@@ -93,7 +93,7 @@ int main(void)
     dac_volume(128);
 
     _delay_ms(2000);
-     play_characters(s_welcome, getchar_eep);
+    play_characters(s_welcome, getchar_eep);
 
     // init morse
     audio_morse_init(500, 20, 20);

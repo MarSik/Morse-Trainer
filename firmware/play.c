@@ -7,6 +7,7 @@
 #include "play.h"
 #include "sine.h"
 #include "interface.h"
+#include "lang.h"
 
 uint8_t getchar_str(const uint8_t *s)
 {
@@ -119,7 +120,7 @@ uint8_t play_morse(const uint8_t *chs, getchar_f get)
             uint8_t v_length = MORSE_LEN(v_idx);
             enable_sine_int();
             audio_morse_data(v_length, v_bitmask,
-                             (next == ' ') ?
+                             (next == SPACE) ?
                              WORD_SPACE_LEN : LETTER_SPACE_LEN);
         }
 
