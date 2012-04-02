@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <avr/eeprom.h>
 #include "morse.h"
+#include "play.h"
 
 #define RAND(xN) (rand() / (RAND_MAX / (xN)))
 #define LESSON_TABLE(name) uint8_t name[]
@@ -11,7 +12,7 @@
 
 extern LESSON_TABLE(lessons) EEMEM;
 
-#define LESSON_COUNT(name) sizeof(name)
+#define LESSON_COUNT 23 /*(sizeof(lessons)/LESSON_ENTRY_LEN)*/
 
 #define LESSON_STARTCHAR(v) (((v) >> 10) & 0b111111)
 #define LESSON_ENDCHAR(v) (((v) >> 4) & 0b111111)
@@ -26,9 +27,9 @@ uint8_t inline lesson_get(uint8_t *table, uint8_t id,
                 uint8_t *groupmin, uint8_t *groupmax,
                 uint8_t *speed, uint8_t *effective_speed)
 {
-    if (id>=LESSON_COUNT(table)) return 0;
+    if (id>=LESSON_COUNT) return 0;
 
-    uint8_t *addr = table + id*LESSON_ENTRY_LEN;
+    uint8_t *addr = table + (id*LESSON_ENTRY_LEN);
 
     uint16_t e1 = (eeprom_read_byte(addr) << 8) + eeprom_read_byte(addr+1);
     uint8_t e2a = eeprom_read_byte(addr + 2);

@@ -51,7 +51,8 @@ void setup(void)
     teaching_mode = MODE_SINGLE;
 }
 
-static uint8_t buffer[51];
+#define BUFFER_LEN 100
+static uint8_t buffer[BUFFER_LEN+1];
 
 
 uint8_t menu_item(const uint8_t *entry)
@@ -145,9 +146,9 @@ int main(void)
             buffer[2] = 0;
             play_characters(buffer, getchar_str);
 
-            uint8_t lesson_len, speed = 6, effective_speed = 6;
+            uint8_t speed = 6, effective_speed = 6;
             uint8_t correct = 0;
-            lesson_len = lesson_new(lesson, 50, &speed, &effective_speed, buffer);
+            uint8_t lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer);
 
             audio_wait_init(2);
             audio_play();

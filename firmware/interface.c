@@ -25,14 +25,18 @@ inline void debounce(void)
 void interface_iambic_key(void)
 {
     DDRA |= _BV(PA5); // middle of the jack connector
+    PCMSK0 |= _BV(PCINT5);
+
     DDRA |= _BV(PA4); // tip of the jack connector
     PORTA |= _BV(PA4) | _BV(PA5);
 }
 
 void interface_standard_key(void)
 {
-    DDRA |= _BV(PA5); // middle of the jack connector
-    DDRA &= ~_BV(PA4); // tip of the jack connector
+    DDRA &= ~_BV(PA5); // middle of the jack connector
+    PCMSK0 &= ~_BV(PCINT5);
+
+    DDRA |= _BV(PA4); // tip of the jack connector
     PORTA |= _BV(PA4) | _BV(PA5);
 }
 
