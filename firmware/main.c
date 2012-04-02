@@ -206,6 +206,13 @@ int main(void)
                 play_morse(buffer, getchar_str);
                 _delay_ms(1500);
 
+                /* convert spaces to audible spaces */
+                uint8_t *tchr = buffer;
+                while(*tchr) {
+                    if(*tchr == SPACE) *tchr = AUDIBLE_SPACE;
+                    ++tchr;
+                }
+
                 led_on(LED_RED);
                 interface_begin(LATCHING_MODE, _BV(KEY_A));
                 _delay_ms(500);

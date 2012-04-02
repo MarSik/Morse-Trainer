@@ -14,6 +14,8 @@
 #define C_Thc "\x06"
 #define C_Nhc "\x07"
 
+#define SPACE ' '
+#define AUDIBLE_SPACE '\x1F'
 
 /* define strings */
 uint8_t s_welcome[] EEMEM = "vitejte";
