@@ -28,7 +28,7 @@
 #define DAC_DEC 0b10
 
 /* volume status */
-uint8_t volume_level;
+volatile uint8_t volume_level;
 
 
 void dac_fadein()
@@ -70,8 +70,6 @@ void dac_init()
     DAC_PORT |= _BV(DAC_CS);
 
     /* full output, middle level */
-    dac_volume(255);
-
     dac_begin();
     dac_output(128);
     dac_end();

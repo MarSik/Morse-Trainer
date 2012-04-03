@@ -5,7 +5,9 @@
 
 /* define index of special chars */
 #define C_CH "\x01"
+#define C_ERROR "\xff"
 
+/* accented characters */
 #define C_Zhc "\x08"
 #define C_Shc "\x02"
 #define C_Chc "\x03"

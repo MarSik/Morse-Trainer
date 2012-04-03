@@ -24,7 +24,7 @@ uint8_t getchar_pgm(const uint8_t *s)
     return pgm_read_byte(s);
 }
 
-void play_characters(const uint8_t *chs, getchar_f get)
+void play_characters(const uint8_t *chs, getchar_f get, uint8_t compose)
 {
     uint8_t a2,a1,a0;
     uint16_t l = 0;
@@ -41,13 +41,14 @@ void play_characters(const uint8_t *chs, getchar_f get)
         flash_begin();
         l = flash_info(get(chs), &a2, &a1, &a0);
         flash_end();
-    
+
         flash_begin();
         flash_read_init(a2, a1, a0);
     
         // prefill buffer
         while (!audio_buffer_full() && l>0) {
-            audio_wav_data(flash_read());
+            uint8_t s = flash_read();
+            audio_wav_data(s);
             l--;
         }
 
@@ -68,7 +69,8 @@ void play_characters(const uint8_t *chs, getchar_f get)
     while(get(chs)) {
         while (l>0) {
             while (audio_buffer_full()) sleep_mode();
-            audio_wav_data(flash_read());
+            uint8_t s = flash_read();
+            audio_wav_data(s);
             l--;
         }
         flash_end();
@@ -95,7 +97,7 @@ void play_characters(const uint8_t *chs, getchar_f get)
 void play_character(uint8_t id)
 {
     uint8_t s[] = {id, 0x0};
-    play_characters(s, getchar_str);
+    play_characters(s, getchar_str, 0);
 }
 
 uint8_t play_morse(const uint8_t *chs, getchar_f get)

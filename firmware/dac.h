@@ -38,10 +38,9 @@ void inline dac_end(void)
 /* set audio volume 0 - 255 */
 void dac_volume(uint8_t vol);
 
+extern volatile uint8_t volume_level;
+
 /* add substract one from actual volume till it reaches MAX or 0 */ 
-extern uint8_t volume_level;
-
-
 void inline dac_louder(void)
 {
     if(volume_level < 245) {

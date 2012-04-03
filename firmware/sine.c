@@ -35,7 +35,8 @@ uint8_t sine_table[] EEMEM = {
 
 uint8_t sine_table_get(uint8_t id)
 {
-    return eeprom_read_byte(sine_table + id)/2;
+    uint8_t v = eeprom_read_byte(sine_table + id);
+    return v - v/4;
 }
 
 /* get sine value transposed on 0 - 255 (center at 128),
