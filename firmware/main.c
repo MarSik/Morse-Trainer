@@ -233,7 +233,7 @@ int main(void)
                 audio_stop();
                 interface_standard_key();
             }
-            /* end keying test */ 
+            /* end keying test */
 
             /* play resulting score */
             play_characters(s_correct, getchar_eep, COMPOSED);
