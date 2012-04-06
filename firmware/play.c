@@ -97,7 +97,7 @@ void play_characters(const uint8_t *chs, getchar_f get, uint8_t compose)
 void play_character(uint8_t id)
 {
     uint8_t s[] = {id, 0x0};
-    play_characters(s, getchar_str, 0);
+    play_characters(s, getchar_str, FULL);
 }
 
 uint8_t play_morse(const uint8_t *chs, getchar_f get)

@@ -31,7 +31,7 @@
                      space after word 7 marks
 
    Sampling timer [wav]:
-                   - 8kHz
+                   - 16kHz
                    - on OVF feeds wav next data byte from buffer to DAC
                    - moves buffer pointers to next byte
 */
@@ -65,11 +65,11 @@ void audio_morse_init(uint16_t pitch, uint8_t wpm, uint8_t effective_wpm);
  */
 void audio_wait_init(uint8_t speed);
 
-/* Prepare first sample/morse character to play, unmute and start needed timers */
+/* Prepare first sample/morse character to play and start needed timers */
 #define audio_play audio_start
 void audio_start(void);
 
-/* Stop both timers and reset AD to middle position + mute */
+/* Stop both timers and reset AD to middle position */
 void audio_stop(void);
 
 /* Is the buffer full? */

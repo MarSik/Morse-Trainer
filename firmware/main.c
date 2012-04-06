@@ -57,7 +57,7 @@ static uint8_t buffer[BUFFER_LEN+1];
 
 uint8_t menu_item(const uint8_t *entry)
 {
-    play_characters(entry, getchar_eep, 1);
+    play_characters(entry, getchar_eep, COMPOSED);
     
     led_on(LED_RED);
     interface_buttons &= ~_BV(BUTTON);
@@ -93,7 +93,7 @@ int main(void)
     dac_volume(128);
 
     _delay_ms(2000);
-    play_characters(s_welcome, getchar_eep, 1);
+    play_characters(s_welcome, getchar_eep, COMPOSED);
 
     // init morse
     audio_morse_init(500, 20, 20);
@@ -139,12 +139,12 @@ int main(void)
         while(!(interface_buttons & _BV(BUTTON))) {
             uint8_t lesson = lesson_id();
 
-            play_characters(s_lesson, getchar_eep, 1);
+            play_characters(s_lesson, getchar_eep, COMPOSED);
 
             buffer[0] = tensinascii(lesson+1);
             buffer[1] = onesinascii(lesson+1);
             buffer[2] = 0;
-            play_characters(buffer, getchar_str, 0);
+            play_characters(buffer, getchar_str, FULL);
 
             uint8_t speed = 6, effective_speed = 6;
             uint8_t correct = 0;
@@ -175,7 +175,7 @@ int main(void)
                     // sinewave is not playing yet
                     morse_find(*ch, &xid);
                     if ((*ch) == xid) {
-                        play_characters(tmp, getchar_str, 0);
+                        play_characters(tmp, getchar_str, FULL);
                         _delay_ms(500);
                     
                         audio_morse_init(500, speed, speed);
@@ -216,7 +216,7 @@ int main(void)
                 led_on(LED_RED);
                 interface_begin(LATCHING_MODE, _BV(KEY_A));
                 _delay_ms(500);
-                play_characters(buffer, getchar_str, 0);
+                play_characters(buffer, getchar_str, FULL);
                 _delay_ms(1000);
                 led_off(LED_RED);
                 correct = interface_presses;
@@ -236,14 +236,14 @@ int main(void)
             /* end keying test */ 
 
             /* play resulting score */
-            play_characters(s_correct, getchar_eep, 1);
+            play_characters(s_correct, getchar_eep, COMPOSED);
 
             buffer[0] = tensinascii(correct);
             buffer[1] = onesinascii(correct);
             buffer[2] = 0;
-            play_characters(buffer, getchar_str, 0);
+            play_characters(buffer, getchar_str, FULL);
 
-            play_characters(s_outof, getchar_eep, 0);
+            play_characters(s_outof, getchar_eep, COMPOSED);
 
             buffer[0] = tensinascii(lesson_len);
             buffer[1] = onesinascii(lesson_len);
@@ -253,7 +253,7 @@ int main(void)
             /* if the success rate is higher than 95%, move to the next lesson */
             if ((lesson_len > 0) && correct >= (lesson_len - lesson_len/20)) {
                 lesson_change(1);
-                play_characters(s_congrats, getchar_eep, 1);
+                play_characters(s_congrats, getchar_eep, COMPOSED);
             }
 
             _delay_ms(3000);

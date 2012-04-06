@@ -54,13 +54,13 @@ void dac_output(uint8_t value)
     spi_transfer(value);
 
     if (volume_flags & _BV(VOLUME_CHANGED)) {
+        volume_flags &= ~_BV(VOLUME_CHANGED);
+
         /* output the command byte for volume value */
         spi_transfer((DAC_VOLUME << 4) | (DAC_WRITE << 2));
 
         /* output the data byte for volume value */
         spi_transfer((volume_flags & VOLUME_MUTE) ? 0 : volume_level);
-
-        volume_flags &= ~_BV(VOLUME_CHANGED);
     }
 }
 
@@ -69,7 +69,7 @@ void dac_init()
     DAC_DDR |= _BV(DAC_CS);
     DAC_PORT |= _BV(DAC_CS);
 
-    /* full output, middle level */
+    /* middle level */
     dac_begin();
     dac_output(128);
     dac_end();
