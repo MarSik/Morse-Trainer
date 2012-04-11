@@ -58,10 +58,13 @@ void audio_wav_init(uint16_t samplerate);
    1024 > 38*floor(586/effective_wpm) - 28*floor(586/wpm)
 
    floor means to strip the partial part and keep only the whole part of the number
+
+   Setting the effective_wpm to 0 switches to morse keying mode
 */
 void audio_morse_init(uint16_t pitch, uint8_t wpm, uint8_t effective_wpm);
 
 /*
+  Enables blinking mode, speed is number of blinks per second
  */
 void audio_wait_init(uint8_t speed);
 

@@ -41,7 +41,6 @@ static volatile uint8_t buffer_data[AUDIO_BUFFER_SIZE];
 #define buffer_first GPIOR1
 volatile uint8_t buffer_empty;
 
-
 volatile uint8_t buffer_chardits;
 
 static void inline enable_morse_int(void)

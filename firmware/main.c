@@ -178,6 +178,8 @@ int main(void)
                         play_characters(tmp, getchar_str, FULL);
                         _delay_ms(500);
                     
+                        /* it is just a single char, no need to use
+                           effective speed */
                         audio_morse_init(500, speed, speed);
                         play_morse(tmp, getchar_str);
                     
@@ -226,7 +228,11 @@ int main(void)
             /* keying test */
             else if (teaching_mode == MODE_KEYING) {
                 interface_iambic_key();
+
+                /* keying uses effective_speed
+                   setting effective argument to 0 enables keyer */
                 audio_morse_init(500, effective_speed, 0);
+
                 interface_begin(NONLATCHING_MODE, _BV(KEY_A));
                 audio_play();
                 while(!(interface_buttons & _BV(BUTTON))) sleep_mode();
