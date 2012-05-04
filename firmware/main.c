@@ -119,7 +119,7 @@ int main(void)
                 break;
             }
 
-            if (!menu_item(s_groups)) {
+            if (menu_item(s_groups)) {
                 teaching_mode = MODE_GROUPS;
                 break;
             }
