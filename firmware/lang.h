@@ -39,8 +39,15 @@ extern uint8_t s_farnsworth[] EEMEM; //pronounciation
 extern uint8_t s_single[] EEMEM;
 extern uint8_t s_groups[] EEMEM;
 extern uint8_t s_keying[] EEMEM;
+extern uint8_t s_digrams[] EEMEM;
 
 extern uint8_t s_next[] EEMEM;
 extern uint8_t s_previous[] EEMEM;
+
+extern uint8_t s_remove[] EEMEM;
+extern uint8_t s_add[] EEMEM;
+
+extern uint8_t s_lesson_repeat[] EEMEM;
+extern uint8_t s_lesson_all[] EEMEM;
 
 #endif /* __MT_20120319_lang_MS__ */

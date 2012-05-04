@@ -24,5 +24,6 @@ uint8_t morse_find(uint8_t id, uint8_t *chr);
 
 #define MORSE_TABLE(name) uint8_t name[]
 extern MORSE_TABLE(morse_table) EEMEM;
+#define MORSE_TABLE_SIZE 42
 
 #endif /* __MT_morse_20120309__ */

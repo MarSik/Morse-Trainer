@@ -20,6 +20,7 @@ static uint8_t randomizer EEMEM = 0;
 static enum{
     MODE_GROUPS,
     MODE_SINGLE,
+    MODE_DIGRAMS,
     MODE_KEYING
 } teaching_mode;
 
@@ -100,6 +101,8 @@ int main(void)
     play_morse(s_welcome_morse, getchar_eep);
 
     _delay_ms(1500);
+
+    uint8_t lesson_flags = 0;
     
     while(1) {
         /* menu code */
@@ -111,7 +114,12 @@ int main(void)
                 break;
             }
 
-            if (menu_item(s_groups)) {
+            if (menu_item(s_digrams)) {
+                teaching_mode = MODE_DIGRAMS;
+                break;
+            }
+
+            if (!menu_item(s_groups)) {
                 teaching_mode = MODE_GROUPS;
                 break;
             }
@@ -121,6 +129,16 @@ int main(void)
                 break;
             }
 
+            if ((lesson_flags & LESSON_ALL) && menu_item(s_lesson_repeat)) {
+                lesson_flags &= ~LESSON_ALL;
+                continue;
+            }
+
+            if (!(lesson_flags & LESSON_ALL) && menu_item(s_lesson_all)) {
+                lesson_flags |= LESSON_ALL;
+                continue;
+            }
+
             if (menu_item(s_next)) {
                 lesson_change(1);
                 continue;
@@ -128,6 +146,16 @@ int main(void)
 
             if (menu_item(s_previous)) {
                 lesson_change(-1);
+                continue;
+            }
+
+            if (menu_item(s_add)) {
+                lesson_chars_change(1);
+                continue;
+            }
+
+            if (menu_item(s_remove)) {
+                lesson_chars_change(-1);
                 continue;
             }
 
@@ -148,7 +176,8 @@ int main(void)
 
             uint8_t speed = 6, effective_speed = 6;
             uint8_t correct = 0;
-            uint8_t lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer);
+            uint8_t lesson_len = 0;
+
 
             audio_wait_init(2);
             audio_play();
@@ -165,6 +194,7 @@ int main(void)
 
             if (teaching_mode == MODE_SINGLE) {
                 /* single char teaching mode */
+                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_NO_SPACES);
                 uint8_t *ch = buffer;
 
                 while (*ch) {
@@ -201,9 +231,46 @@ int main(void)
             }
             /* end single char teaching mode */        
 
+            /* digram teaching mode */
+            else if (teaching_mode == MODE_DIGRAMS) {
+                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_DIGRAMS);
+
+                /* split string to digrams */
+                uint8_t *digram = buffer;
+                while(*digram){
+                    if (*digram == ' ') {
+                        *digram = '\0';
+                        --lesson_len;
+                    }
+                    digram++;
+                }
+
+                /* play digrams */
+                digram = buffer;
+                while(*digram){
+                    audio_morse_init(500, speed, effective_speed);
+                    play_morse(digram, getchar_str);
+
+                    interface_begin(LATCHING_MODE, 0);
+                    led_on(LED_RED);
+                    play_characters(digram, getchar_str, FULL);
+                    audio_wait_init(6);
+                    audio_play();
+                    timeout(1500, _BV(KEY_A));
+                    led_off(LED_RED);
+                    audio_stop();
+                    _delay_ms(500);
+
+                    if (interface_buttons & _BV(KEY_A)) correct += 2;
+                    digram += 3;
+                }
+            }
+            /* end digram teaching mode */
 
             /* long test */
             else if (teaching_mode == MODE_GROUPS) {
+                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags);
+
                 audio_morse_init(500, speed, effective_speed);
                 play_morse(buffer, getchar_str);
                 _delay_ms(1500);
@@ -227,6 +294,8 @@ int main(void)
 
             /* keying test */
             else if (teaching_mode == MODE_KEYING) {
+                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_NO_SPACES);
+
                 interface_iambic_key();
 
                 /* keying uses effective_speed
@@ -257,8 +326,8 @@ int main(void)
             play_characters(buffer, getchar_str, 0);
 
             /* if the success rate is higher than 95%, move to the next lesson */
-            if ((lesson_len > 0) && correct >= (lesson_len - lesson_len/20)) {
-                lesson_change(1);
+            if ((lesson_flags & LESSON_ALL) && (lesson_len > 0) && correct >= (lesson_len - lesson_len/20)) {
+                lesson_chars_change(1);
                 play_characters(s_congrats, getchar_eep, COMPOSED);
             }
 
