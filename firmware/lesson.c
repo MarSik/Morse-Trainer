@@ -83,7 +83,10 @@ uint8_t lesson_new(uint8_t id, uint8_t length, uint8_t *speed, uint8_t *effectiv
             group--;
         }
 
-        if (length-->0) buffer[idx++] = ' ';
+        if (length>0) {
+            buffer[idx++] = ' ';
+            length--;
+        }
     }
 
     buffer[idx] = '\0';
