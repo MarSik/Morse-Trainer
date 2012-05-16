@@ -19,8 +19,9 @@ static uint8_t randomizer EEMEM = 0;
 
 static enum{
     MODE_GROUPS,
-    MODE_SINGLE,
     MODE_DIGRAMS,
+    MODE_MORSE_TX,
+    MODE_MORSE_RX,
     MODE_KEYING
 } teaching_mode;
 
@@ -49,29 +50,34 @@ void setup(void)
     eeprom_write_byte(&randomizer, srand+1);
 
     /* initialize learning mode */
-    teaching_mode = MODE_SINGLE;
+    teaching_mode = MODE_MORSE_TX;
 }
 
 #define BUFFER_LEN 10
 static uint8_t buffer[BUFFER_LEN+1];
 
+#define MENU_SELECT 1
+#define MENU_PREV 2
+#define MENU_NEXT 3
+#define MENU_TIMEOUT 0
 
 uint8_t menu_item(const uint8_t *entry)
 {
     play_characters(entry, getchar_eep, COMPOSED);
     
     led_on(LED_RED);
-    interface_buttons &= ~_BV(BUTTON);
+    interface_buttons &= ~(_BV(BUTTON) | _BV(ROTARY_NEXT) | _BV(ROTARY_PREV));
     audio_wait_init(6);
     audio_play();
     timeout(1500, _BV(BUTTON));
     led_off(LED_RED);
     audio_stop();
-    if (interface_buttons & _BV(BUTTON)) {
-        return 1;
-    }
-    _delay_ms(500);
-    return 0;
+
+    if (interface_buttons & _BV(BUTTON)) return MENU_SELECT;
+    else if (interface_buttons & _BV(ROTARY_NEXT)) return MENU_NEXT;
+    else if (interface_buttons & _BV(ROTARY_PREV)) return MENU_PREV;
+
+    return MENU_TIMEOUT;
 }
 
 /* for some reason, this code was more space efficient on gcc
@@ -93,69 +99,80 @@ int main(void)
     setup();
     dac_volume(128);
 
-    interface_begin(LATCHING_MODE, 0);
-    _delay_ms(2000);
-    play_characters(s_welcome, getchar_eep, COMPOSED);
+    uint8_t lesson_flags = 0;    
 
-    // init morse
-    audio_morse_init(500, 20, 20);
-    play_morse(s_welcome_morse, getchar_eep);
-
-    _delay_ms(1500);
-
-    uint8_t lesson_flags = 0;
-    
     while(1) {
         /* menu code */
         interface_begin(LATCHING_MODE, 0);
+        volume_flags |= _BV(HOLD_VOLUME);
 
         while(1) {
-            if (menu_item(s_single)) {
-                teaching_mode = MODE_SINGLE;
+            if (menu_item(s_resume) == MENU_SELECT) {
                 break;
             }
 
-            if (menu_item(s_digrams)) {
+            if (menu_item(s_status) == MENU_SELECT) {
+                delay(500);
+                play_characters(s_score, getchar_eep);
+
+                buffer[0] = tensinascii(correct);
+                buffer[1] = onesinascii(correct);
+                buffer[2] = '\0';
+                play_characters(buffer, getchar_str);
+                continue;
+            }
+
+            if (menu_item(s_morse_tx) == MENU_SELECT) {
+                teaching_mode = MODE_MORSE_TX;
+                continue;
+            }
+
+            if (menu_item(s_morse_rx) == MENU_SELECT) {
+                teaching_mode = MODE_MORSE_RX;
+                continue;
+            }
+
+            if (menu_item(s_digrams) == MENU_SELECT) {
                 teaching_mode = MODE_DIGRAMS;
-                break;
+                continue;
             }
 
-            if (menu_item(s_groups)) {
+            if (menu_item(s_groups) == MENU_SELECT) {
                 teaching_mode = MODE_GROUPS;
-                break;
+                continue;
             }
             
-            if (menu_item(s_keying)) {
+            if (menu_item(s_keying) == MENU_SELECT) {
                 teaching_mode = MODE_KEYING;
-                break;
+                continue;
             }
 
-            if ((lesson_flags & LESSON_ALL) && menu_item(s_lesson_repeat)) {
+            if ((lesson_flags & LESSON_ALL) && menu_item(s_lesson_repeat) == MENU_SELECT) {
                 lesson_flags &= ~LESSON_ALL;
                 continue;
             }
 
-            if (!(lesson_flags & LESSON_ALL) && menu_item(s_lesson_all)) {
+            if (!(lesson_flags & LESSON_ALL) && menu_item(s_lesson_all) == MENU_SELECT) {
                 lesson_flags |= LESSON_ALL;
                 continue;
             }
 
-            if (menu_item(s_next)) {
+            if (menu_item(s_next) == MENU_SELECT) {
                 lesson_change(1);
                 continue;
             }
 
-            if (menu_item(s_previous)) {
+            if (menu_item(s_previous) == MENU_SELECT) {
                 lesson_change(-1);
                 continue;
             }
 
-            if (menu_item(s_add)) {
+            if (menu_item(s_add) == MENU_SELECT) {
                 lesson_chars_change(1);
                 continue;
             }
 
-            if (menu_item(s_remove)) {
+            if (menu_item(s_remove) == MENU_SELECT) {
                 lesson_chars_change(-1);
                 continue;
             }
@@ -163,6 +180,7 @@ int main(void)
         }
 
         interface_begin(LATCHING_MODE, 0);
+        volume_flags &= ~_BV(HOLD_VOLUME);
 
         /* teaching code */
         while(!(interface_buttons & _BV(BUTTON))) {
@@ -173,7 +191,7 @@ int main(void)
             uint8_t lesson_len = 0;
 
             /* Prepare one block of lesson data */
-            if (teaching_mode == MODE_SINGLE) lesson_len = lesson_new(lesson, 1, &speed, &effective_speed, buffer, lesson_flags);
+            if (teaching_mode == MODE_MORSE_TX || teaching_mode == MODE_MORSE_RX) lesson_len = lesson_new(lesson, 1, &speed, &effective_speed, buffer, lesson_flags);
             else if (teaching_mode == MODE_DIGRAMS) lesson_len = lesson_new(lesson, 2, &speed, &effective_speed, buffer, lesson_flags);
             else if (teaching_mode == MODE_GROUPS) lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_GROUPS);
 
@@ -182,7 +200,7 @@ int main(void)
             else correct = 0;
 
             /* Play "question part" */
-            if (teaching_mode == MODE_SINGLE ||
+            if (teaching_mode == MODE_MORSE_TX ||
                 teaching_mode == MODE_KEYING) {
                 play_characters(buffer, getchar_str, FULL);
             }
@@ -192,11 +210,11 @@ int main(void)
             }
 
             /* Prepare interface for counting answers */
-            interface_begin(LATCHING_MODE, 0);
+            interface_buttons &= ~_BV(KEY_A);
             led_on(LED_RED);
 
             /* Play "answer" and count */
-            if (teaching_mode == MODE_SINGLE ||
+            if (teaching_mode == MODE_MORSE_TX ||
                 teaching_mode == MODE_KEYING) {
                 audio_morse_init(500, speed, effective_speed);
                 play_morse(buffer, getchar_str);
@@ -205,17 +223,16 @@ int main(void)
                 play_characters(buffer, getchar_str, FULL);
             }
 
-            /* wait for click */
+            /* Wait for click */
             timeout(1500, _BV(KEY_A));
 
             /* Increase score */
             if (interface_buttons & _BV(KEY_A)) correct += lesson_len;
 
-            /* if the success rate is higher than 95%, add character */
-            if ((lesson_flags & LESSON_ALL) && (correct >= 95)) {
+            /* If the score is higher than 100, add character */
+            if (correct >= 99) {
                 lesson_chars_change(1);
                 correct = 0; // reset counter
-                play_characters(s_congrats, getchar_eep, COMPOSED);
             }
 
             _delay_ms(2000);

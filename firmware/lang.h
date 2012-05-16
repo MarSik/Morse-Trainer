@@ -25,6 +25,7 @@ extern uint8_t s_lesson[] EEMEM;
 extern uint8_t s_correct[] EEMEM;
 extern uint8_t s_congrats[] EEMEM;
 extern uint8_t s_outof[] EEMEM;
+extern uint8_t s_score[] EEMEM;
 
 extern uint8_t s_back[] EEMEM;
 
@@ -36,7 +37,8 @@ extern uint8_t s_speed[] EEMEM;
 extern uint8_t s_koch[] EEMEM ;
 extern uint8_t s_farnsworth[] EEMEM; //pronounciation
 
-extern uint8_t s_single[] EEMEM;
+extern uint8_t s_morse_tx[] EEMEM;
+extern uint8_t s_morse_rx[] EEMEM;
 extern uint8_t s_groups[] EEMEM;
 extern uint8_t s_keying[] EEMEM;
 extern uint8_t s_digrams[] EEMEM;
