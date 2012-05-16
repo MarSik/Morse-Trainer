@@ -63,30 +63,16 @@ uint8_t lesson_new(uint8_t id, uint8_t length, uint8_t *speed, uint8_t *effectiv
 
     if (!lesson_get(lessons, id, &char_min, &char_max, &group_min, &group_max, speed, effective_speed)) return 0;
 
-    uint8_t group;
-
-    if (flags & LESSON_DIGRAMS) {
-        group_min = 2;
-        group_max = 2;
-    }
-
     if (flags & LESSON_ALL) char_min = 0;
 
-    while (length>0 && length>group_min) {
-        if (flags & LESSON_NO_SPACES) group = length;
-        else if (group_min == group_max) group = group_min;
-        else group = group_min + RAND(1 + group_max - group_min);
+    if (flags & LESSON_GROUPS) {
+        if (group_min == group_max) length = group_min;
+        else length = group_min + RAND(1 + group_max - group_min);
+    }
 
-        while (length>0 && group>0) {
-            buffer[idx++] = MORSE_ID(char_min + RAND(1 + char_max - char_min));
-            length--;
-            group--;
-        }
-
-        if (length>0) {
-            buffer[idx++] = ' ';
-            length--;
-        }
+    while (length>0) {
+        buffer[idx++] = MORSE_ID(char_min + RAND(1 + char_max - char_min));
+        length--;
     }
 
     buffer[idx] = '\0';

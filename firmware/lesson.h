@@ -13,11 +13,10 @@
 extern LESSON_TABLE(lessons) EEMEM;
 
 #define LESSON_COUNT 8 /*(sizeof(lessons)/LESSON_ENTRY_LEN)*/
-#define TEACH_LAST_CHARS 4
+#define TEACH_LAST_CHARS 5
 
-#define LESSON_NO_SPACES (1 << 0)
-#define LESSON_DIGRAMS (1 << 1)
-#define LESSON_ALL (1 << 2)
+#define LESSON_GROUPS (1 << 0)
+#define LESSON_ALL (1 << 1)
 
 #define LESSON_GROUPMAX(v) (((v) >> 4) & 0b1111)
 #define LESSON_GROUPMIN(v) ((v) & 0b1111)

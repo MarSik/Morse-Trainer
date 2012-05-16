@@ -52,7 +52,7 @@ void setup(void)
     teaching_mode = MODE_SINGLE;
 }
 
-#define BUFFER_LEN 100
+#define BUFFER_LEN 10
 static uint8_t buffer[BUFFER_LEN+1];
 
 
@@ -93,6 +93,7 @@ int main(void)
     setup();
     dac_volume(128);
 
+    interface_begin(LATCHING_MODE, 0);
     _delay_ms(2000);
     play_characters(s_welcome, getchar_eep, COMPOSED);
 
@@ -167,171 +168,57 @@ int main(void)
         while(!(interface_buttons & _BV(BUTTON))) {
             uint8_t lesson = lesson_id();
 
-            play_characters(s_lesson, getchar_eep, COMPOSED);
-
-            buffer[0] = tensinascii(lesson+1);
-            buffer[1] = onesinascii(lesson+1);
-            buffer[2] = 0;
-            play_characters(buffer, getchar_str, FULL);
-
             uint8_t speed = 6, effective_speed = 6;
             uint8_t correct = 0;
             uint8_t lesson_len = 0;
 
+            /* Prepare one block of lesson data */
+            if (teaching_mode == MODE_SINGLE) lesson_len = lesson_new(lesson, 1, &speed, &effective_speed, buffer, lesson_flags);
+            else if (teaching_mode == MODE_DIGRAMS) lesson_len = lesson_new(lesson, 2, &speed, &effective_speed, buffer, lesson_flags);
+            else if (teaching_mode == MODE_GROUPS) lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_GROUPS);
 
-            audio_wait_init(2);
-            audio_play();
-            set_sleep_mode(SLEEP_MODE_IDLE);
-            interface_begin(LATCHING_MODE, 0);
-            while(
-                  (!(interface_buttons & _BV(KEY_A))) &&
-                  (!(interface_buttons & _BV(BUTTON)))) sleep_mode();
-            audio_stop();
+            /* Lower score */
+            if (correct > lesson_len) correct -= lesson_len;
+            else correct = 0;
 
-            if (interface_buttons & _BV(BUTTON)) break;
-
-            _delay_ms(1000);
-
-            if (teaching_mode == MODE_SINGLE) {
-                /* single char teaching mode */
-                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_NO_SPACES);
-                uint8_t *ch = buffer;
-
-                while (*ch) {
-                    uint8_t xid;
-                    uint8_t tmp[] = {*ch, 0};
-                
-                    // we do not need to disable morse ints, because
-                    // sinewave is not playing yet
-                    morse_find(*ch, &xid);
-                    if ((*ch) == xid) {
-                        play_characters(tmp, getchar_str, FULL);
-                        _delay_ms(500);
-                    
-                        /* it is just a single char, no need to use
-                           effective speed */
-                        audio_morse_init(500, speed, speed);
-                        play_morse(tmp, getchar_str);
-                    
-			interface_begin(LATCHING_MODE, 0);
-                        led_on(LED_RED);
-                        audio_wait_init(6);
-                        audio_play();
-                        timeout(1500, _BV(KEY_A));
-                        led_off(LED_RED);
-                        audio_stop();
-                        _delay_ms(500);
-                    
-                        if (interface_buttons & _BV(KEY_A)) ++correct;
-                    }
-                    else lesson_len--;
-                
-                    ++ch;
-                }
+            /* Play "question part" */
+            if (teaching_mode == MODE_SINGLE ||
+                teaching_mode == MODE_KEYING) {
+                play_characters(buffer, getchar_str, FULL);
             }
-            /* end single char teaching mode */        
-
-            /* digram teaching mode */
-            else if (teaching_mode == MODE_DIGRAMS) {
-                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_DIGRAMS);
-
-                /* split string to digrams */
-                uint8_t *digram = buffer;
-                while(*digram){
-                    if (*digram == ' ') {
-                        *digram = '\0';
-                        --lesson_len;
-                    }
-                    digram++;
-                }
-
-                /* play digrams */
-                digram = buffer;
-                while(*digram){
-                    audio_morse_init(500, speed, effective_speed);
-                    play_morse(digram, getchar_str);
-
-                    interface_begin(LATCHING_MODE, 0);
-                    led_on(LED_RED);
-                    play_characters(digram, getchar_str, FULL);
-                    audio_wait_init(6);
-                    audio_play();
-                    timeout(1500, _BV(KEY_A));
-                    led_off(LED_RED);
-                    audio_stop();
-                    _delay_ms(500);
-
-                    if (interface_buttons & _BV(KEY_A)) correct += 2;
-                    digram += 3;
-                }
-            }
-            /* end digram teaching mode */
-
-            /* long test */
-            else if (teaching_mode == MODE_GROUPS) {
-                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags);
-
+            else {
                 audio_morse_init(500, speed, effective_speed);
                 play_morse(buffer, getchar_str);
-                _delay_ms(1500);
+            }
 
-                /* convert spaces to audible spaces */
-                uint8_t *tchr = buffer;
-                while(*tchr) {
-                    if(*tchr == SPACE) *tchr = AUDIBLE_SPACE;
-                    ++tchr;
-                }
+            /* Prepare interface for counting answers */
+            interface_begin(LATCHING_MODE, 0);
+            led_on(LED_RED);
 
-                led_on(LED_RED);
-                interface_begin(LATCHING_MODE, _BV(KEY_A));
-                _delay_ms(500);
+            /* Play "answer" and count */
+            if (teaching_mode == MODE_SINGLE ||
+                teaching_mode == MODE_KEYING) {
+                audio_morse_init(500, speed, effective_speed);
+                play_morse(buffer, getchar_str);
+            }
+            else {
                 play_characters(buffer, getchar_str, FULL);
-                _delay_ms(1000);
-                led_off(LED_RED);
-                correct = interface_presses;
             }
-            /* end long test */
 
-            /* keying test */
-            else if (teaching_mode == MODE_KEYING) {
-                lesson_len = lesson_new(lesson, BUFFER_LEN, &speed, &effective_speed, buffer, lesson_flags | LESSON_NO_SPACES);
+            /* wait for click */
+            timeout(1500, _BV(KEY_A));
 
-                interface_iambic_key();
+            /* Increase score */
+            if (interface_buttons & _BV(KEY_A)) correct += lesson_len;
 
-                /* keying uses effective_speed
-                   setting effective argument to 0 enables keyer */
-                audio_morse_init(500, effective_speed, 0);
-
-                interface_begin(NONLATCHING_MODE, _BV(KEY_A));
-                audio_play();
-                while(!(interface_buttons & _BV(BUTTON))) sleep_mode();
-                audio_stop();
-                interface_standard_key();
-            }
-            /* end keying test */
-
-            /* play resulting score */
-            play_characters(s_correct, getchar_eep, COMPOSED);
-
-            buffer[0] = tensinascii(correct);
-            buffer[1] = onesinascii(correct);
-            buffer[2] = 0;
-            play_characters(buffer, getchar_str, FULL);
-
-            play_characters(s_outof, getchar_eep, COMPOSED);
-
-            buffer[0] = tensinascii(lesson_len);
-            buffer[1] = onesinascii(lesson_len);
-            buffer[2] = 0;
-            play_characters(buffer, getchar_str, 0);
-
-            /* if the success rate is higher than 95%, move to the next lesson */
-            if ((lesson_flags & LESSON_ALL) && (lesson_len > 0) && correct >= (lesson_len - lesson_len/20)) {
+            /* if the success rate is higher than 95%, add character */
+            if ((lesson_flags & LESSON_ALL) && (correct >= 95)) {
                 lesson_chars_change(1);
+                correct = 0; // reset counter
                 play_characters(s_congrats, getchar_eep, COMPOSED);
             }
 
-            _delay_ms(3000);
+            _delay_ms(2000);
         }
     }
 
