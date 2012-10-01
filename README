@@ -25,7 +25,7 @@ Devices
 
 ATtiny861A CPU (8kB flash, 512B RAM, 512B EEPROM)
 LM386N headphone amplifier
-A25L40PU 4Mbit SPI flash (about 64s worth of audio when using 8kHz sample rate)
+A25L40PU 4Mbit SPI flash (about 32s worth of audio when using 16kHz sample rate)
 MCP4251-104 100k dual channel SPI digital potentiometer
 
 Architecture
@@ -38,7 +38,7 @@ A25L40PU Flash
    0 B \_ indexing table, 256 entries in the form (3B starting address, 2B length)
 1279 B /  standard characters will be at their ascii position, the rest will have special numbers
 
-1280 B \_ sample data, raw audio samples in mono 8bit, 8kHz samplerate (65.37s) 
+1280 B \_ sample data, raw audio samples in mu-law mono 8bit (cca 12b after decoded), 16kHz samplerate 
  end   /
 
 ATtiny861 EEPROM
@@ -56,6 +56,10 @@ Morse table:
   D<7:0> are dit/dahs - 0 = dit and 1 = dah, only L least significant bits are used, D0 is played first
 
   the table will be constructed using macro MORSE(<ID>, DIT, DAH, ...)
+
+mu-law bases:
+- 16 16bit numbers used for decoding mu-law data according to the table at
+  http://en.wikipedia.org/wiki/%CE%9C-law_algorithm#Discrete
 
 Changelog
 =========

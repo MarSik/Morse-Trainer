@@ -69,19 +69,59 @@ static void sample_wait(void)
     led_toggle(PA5);
 }
 
+/* precomputed table for decoding mu-law compressed audio data */
+static uint16_t mu_law_bases[16] EEMEM = {0, 4096, 6144, 7168, 7680, 7936, 8064, 8128,
+                                          16317, 12221, 10173, 9149, 8637, 8381, 8253, 8189};
+
+static uint16_t decode_mu_law(uint8_t data)
+{
+    uint8_t group = data >> 4;
+    int16_t modifier;
+
+    /* negative part of mu-law space */
+    if (group < 0x8) modifier = 1 << (0x8 - group);
+    /* positive part of mu-law space */
+    else modifier = - (1 << (0xF - group));
+
+    return eeprom_read_word(mu_law_bases + group) + (modifier * (data & 0xf));
+}
+
+
 /* outputs next wav sample and moves buffer pointer */
 static void sample_wav(void)
 {
-    if (audio_buffer_empty()) {
-        buffer_state |= _BV(BUFFER_FINISHED);
-        return;
+    static uint16_t decoded_mu_law = 0;
+    static uint16_t sigma;
+
+    static uint8_t oversampling = 0;
+
+    if (oversampling == 0) {
+        if (audio_buffer_empty()) {
+            buffer_state |= _BV(BUFFER_FINISHED);
+            return;
+        }
+
+        oversampling = AUDIO_OVERSAMPLING;
+        decoded_mu_law = decode_mu_law(buffer_data[buffer_first]);
+        sigma = 0;
+
+        buffer_first = (buffer_first + 1) % AUDIO_BUFFER_SIZE;
+        buffer_state |= _BV(BUFFER_READ_LAST);
     }
 
+    /* add decoded value to error accumulator */
+    sigma += decoded_mu_law;
+
+    /* output 8 MSbits */
     dac_begin();
-    dac_output(buffer_data[buffer_first]);
+    dac_output(sigma >> AUDIO_MU_LAW_FRAC_BITS);
     dac_end();
-    buffer_first = (buffer_first + 1) % AUDIO_BUFFER_SIZE;
-    buffer_state |= _BV(BUFFER_READ_LAST);
+
+    /* substract proper number of MSbs and keep the error */
+    sigma &= ~AUDIO_MU_LAW_FRAC_MASK;
+
+    /* decrease oversampling counter */
+    --oversampling;
 }
 
 /* configure next dit/dah and space to sampling timer
@@ -278,7 +318,7 @@ void audio_wav_init(uint16_t samplerate)
       first, we need number of cpu cycles per sample
       then we need to set prescaler to reduce the number under 1024 (10bits)
     */
-    uint16_t cyclespersample = F_CPU / samplerate;
+    uint16_t cyclespersample = F_CPU / (samplerate * AUDIO_OVERSAMPLING);
     sample_clock = 1; /* clock select */
 
     while (cyclespersample > 1023) {
