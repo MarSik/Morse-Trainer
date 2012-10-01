@@ -46,10 +46,10 @@
 #define BUFFER_READ_LAST 7
 
 /* mu-law decoder consts */
-#define AUDIO_MU_LAW_BITS 12
+#define AUDIO_MU_LAW_BITS 14
 #define AUDIO_MU_LAW_FRAC_BITS (AUDIO_MU_LAW_BITS - 8)
 #define AUDIO_MU_LAW_FRAC_MASK ((1 << AUDIO_MU_LAW_FRAC_BITS) - 1)
-#define AUDIO_OVERSAMPLING (4 << AUDIO_MU_LAW_FRAC_BITS)
+#define AUDIO_OVERSAMPLING 6
 
 /* Initialize sampling timer for audio */
 void audio_wav_init(uint16_t samplerate);
